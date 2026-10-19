@@ -1,0 +1,39 @@
+# Version catalog: one place for every library version.
+# Versions were checked on developer.android.com / Maven Central (see README.md, "Versions").
+[versions]
+agp = "9.4.0"
+kotlin = "2.4.21"
+composeBom = "2026.09.00"
+camerax = "1.6.2"
+lifecycle = "2.11.0"
+activityCompose = "1.13.0"
+coreKtx = "1.19.1"
+mlkitFaceDetection = "16.1.7"
+# 2.16.1 is the last release with a real AAR on Maven Central. 2.17.0 only redirects to LiteRT (see README, "Versions").
+tflite = "2.16.1"
+junit = "4.13.2"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
+
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-foundation = { module = "androidx.compose.foundation:foundation" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+
+camera-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
+camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
+camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
+camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
+
+mlkit-face-detection = { module = "com.google.mlkit:face-detection", version.ref = "mlkitFaceDetection" }
+tflite = { module = "org.tensorflow:tensorflow-lite", version.ref = "tflite" }
+
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+# The Compose compiler plugin must have the same version as Kotlin.
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

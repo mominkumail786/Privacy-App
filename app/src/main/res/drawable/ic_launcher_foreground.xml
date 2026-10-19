@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A simple white shield. Drawn inside the safe zone of an adaptive icon (108dp canvas). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L76,36 L76,54 C76,67 66,76 54,81 C42,76 32,67 32,54 L32,36 Z" />
+    <path
+        android:fillColor="#1F4E79"
+        android:pathData="M54,38 L54,70 C46,66 41,60 41,54 L41,43 Z" />
+</vector>

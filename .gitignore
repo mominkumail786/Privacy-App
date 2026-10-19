@@ -1,0 +1,14 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# The face model is third-party. Download it with scripts/download_model.sh (see README.md).
+# Remove this line if you decide to commit the model yourself.
+/app/src/main/assets/MobileFaceNet.tflite
