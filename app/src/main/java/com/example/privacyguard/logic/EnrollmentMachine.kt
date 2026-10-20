@@ -36,9 +36,12 @@ data class PoseThresholds(
     /** While turning, the pitch may change by at most this (and the other way round). */
     val offAxisMax: Float = 15f,
     val offAxisSlack: Float = 5f,
-    /** Step 1: the face must be roughly facing the camera, absolute limits (not a precise pose). */
-    val centerMaxYaw: Float = 20f,
-    val centerMaxPitch: Float = 25f,
+    /**
+     * Step 1: the face must be roughly facing the camera. These are the only ABSOLUTE limits, and they are wide on
+     * purpose: a phone held at chest height easily gives 25-30 degrees of pitch, and that must not block step 1.
+     */
+    val centerMaxYaw: Float = 25f,
+    val centerMaxPitch: Float = 35f,
     /** Step 1: the angles of the last pictures may differ by at most this ("hold still"). */
     val centerStableSpread: Float = 5f,
     val frontWindow: Int = 5,
@@ -133,6 +136,7 @@ class EnrollmentMachine(private val t: PoseThresholds = PoseThresholds()) {
     private var stableFrames = 0
     private var stableSince = -1L
     private var lastDelta = 0f
+    private var lastPose: PoseSample? = null
     private val recent = ArrayDeque<PoseSample>()
 
     /** Handle one camera picture. [faceCount] = how many faces were found, [pose] = the face if exactly one. */
@@ -157,6 +161,7 @@ class EnrollmentMachine(private val t: PoseThresholds = PoseThresholds()) {
             resetHold()
             return update(nowMs, problem ?: EnrollFeedback.NO_FACE, 0f, 0f, false, false)
         }
+        lastPose = pose
         return when (step) {
             EnrollStep.FRONT -> frontStep(nowMs, pose, manualRequested)
             EnrollStep.LEFT -> movementStep(nowMs, pose, manualRequested, turn = true, second = false)
@@ -170,9 +175,16 @@ class EnrollmentMachine(private val t: PoseThresholds = PoseThresholds()) {
     fun onCaptured(nowMs: Long) {
         if (finished) return
         when (step) {
-            EnrollStep.FRONT -> if (recent.isNotEmpty()) {
-                baselineYaw = median(recent.map { it.yaw })
-                baselinePitch = median(recent.map { it.pitch })
+            EnrollStep.FRONT -> {
+                val last = lastPose
+                if (recent.isNotEmpty()) {
+                    baselineYaw = median(recent.map { it.yaw })
+                    baselinePitch = median(recent.map { it.pitch })
+                } else if (last != null) {
+                    // Captured by hand: use the pose of that moment as the neutral pose.
+                    baselineYaw = last.yaw
+                    baselinePitch = last.pitch
+                }
             }
             EnrollStep.LEFT -> turnSign = signOf(lastDelta)
             EnrollStep.UP -> tiltSign = signOf(lastDelta)
@@ -213,9 +225,11 @@ class EnrollmentMachine(private val t: PoseThresholds = PoseThresholds()) {
     // ------------------------------------------------------------------------------------------ steps
 
     private fun frontStep(now: Long, s: PoseSample, manual: Boolean): EnrollUpdate {
+        // The "Capture now" button must always work once it is shown (the face is valid here).
+        val manualNow = manual && manualAllowed(now)
         if (abs(s.yaw) > t.centerMaxYaw || abs(s.pitch) > t.centerMaxPitch) {
             resetHold()
-            return update(now, EnrollFeedback.NOT_STRAIGHT, 0f, 0f, false, false)
+            return update(now, EnrollFeedback.NOT_STRAIGHT, 0f, 0f, false, manualNow)
         }
         recent.addLast(s)
         while (recent.size > t.frontWindow) recent.removeFirst()
@@ -225,16 +239,15 @@ class EnrollmentMachine(private val t: PoseThresholds = PoseThresholds()) {
             spread(recent.map { it.pitch }) <= t.centerStableSpread
         if (!steady) {
             stableSince = -1
-            return update(now, EnrollFeedback.HOLD_STILL, 0f, 0f, false, false)
+            return update(now, EnrollFeedback.HOLD_STILL, 0f, 0f, false, manualNow)
         }
         if (stableSince < 0) stableSince = now
         val held = now - stableSince
         val ready = held >= t.holdMillis
         val progress = (held.toFloat() / t.holdMillis).coerceIn(0f, 1f)
-        val readyOrManual = ready || manualAllowed(now) && manual
         return update(
             now, if (ready) EnrollFeedback.READY else EnrollFeedback.HOLD_STILL,
-            progress, 0f, true, readyOrManual,
+            progress, 0f, true, ready || manualNow,
         )
     }
 

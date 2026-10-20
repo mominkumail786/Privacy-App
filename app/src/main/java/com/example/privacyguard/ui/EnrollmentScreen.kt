@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -406,16 +407,46 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
     }
 
     ScreenScaffold(title = stringResource(R.string.enroll_title), onBack = onCancel) {
-        Text(stringResource(R.string.enroll_intro), style = MaterialTheme.typography.bodyMedium)
+        // Everything the user must read is ABOVE the camera, so it is visible without scrolling.
+        val stepCount = EnrollStep.entries.size
+        val shownStep = (ui.captured + 1).coerceAtMost(stepCount)
+        Text(stringResource(R.string.enroll_step_format, shownStep), style = MaterialTheme.typography.labelLarge)
+        LinearProgressIndicator(progress = { ui.captured / stepCount.toFloat() }, modifier = Modifier.fillMaxWidth())
 
+        if (ui.saving) {
+            Text(stringResource(R.string.enroll_saving), style = MaterialTheme.typography.titleMedium)
+        } else {
+            // Big instruction for the current step.
+            Text(stringResource(stepTextRes(ui.step)), style = MaterialTheme.typography.titleLarge)
+
+            // One line of feedback: captured / rejected sample / what to do now.
+            val good = ui.feedback == EnrollFeedback.READY || ui.feedback == EnrollFeedback.HOLD_STILL
+            when {
+                ui.flash -> Text(stringResource(R.string.enroll_captured), style = MaterialTheme.typography.titleMedium, color = Color(0xFF2E7D32))
+                ui.rejectedRes != 0 -> Text(stringResource(ui.rejectedRes), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
+                else -> Text(
+                    stringResource(feedbackRes(ui.feedback)),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (good) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface,
+                )
+            }
+
+            // Live indicator: how far the movement is (bar and degrees).
+            LinearProgressIndicator(progress = { ui.progress }, modifier = Modifier.fillMaxWidth())
+            if (ui.step != EnrollStep.FRONT) {
+                Text(stringResource(R.string.enroll_meter, ui.measured, ui.required), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        // Camera preview (70% wide, so the text above stays on screen). The oval turns green while the pose is held.
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.7f)
                 .aspectRatio(3f / 4f)
+                .align(Alignment.CenterHorizontally)
                 .clip(RoundedCornerShape(16.dp)),
         ) {
             AndroidView(factory = { previewView }, modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f))
-            // The oval turns green while the right pose is held.
             val ringColor = if (ui.poseOk) Color(0xFF4CAF50) else Color.White
             Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f)) {
                 val w = size.width * 0.62f
@@ -429,34 +460,7 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
             }
         }
 
-        val stepCount = EnrollStep.entries.size
-        val shownStep = (ui.captured + 1).coerceAtMost(stepCount)
-        Text(stringResource(R.string.enroll_step_format, shownStep), style = MaterialTheme.typography.labelLarge)
-        LinearProgressIndicator(progress = { ui.captured / stepCount.toFloat() }, modifier = Modifier.fillMaxWidth())
-
-        if (ui.saving) {
-            Text(stringResource(R.string.enroll_saving), style = MaterialTheme.typography.titleMedium)
-        } else {
-            // Big instruction for the current step.
-            Text(stringResource(stepTextRes(ui.step)), style = MaterialTheme.typography.titleLarge)
-
-            // Live indicator: how far the movement is (bar and degrees).
-            LinearProgressIndicator(progress = { ui.progress }, modifier = Modifier.fillMaxWidth())
-            if (ui.step != EnrollStep.FRONT) {
-                Text(stringResource(R.string.enroll_meter, ui.measured, ui.required), style = MaterialTheme.typography.bodySmall)
-            }
-
-            // One line of feedback: captured / rejected sample / what to do now.
-            val good = ui.feedback == EnrollFeedback.READY || ui.feedback == EnrollFeedback.HOLD_STILL
-            when {
-                ui.flash -> Text(stringResource(R.string.enroll_captured), style = MaterialTheme.typography.titleMedium, color = Color(0xFF2E7D32))
-                ui.rejectedRes != 0 -> Text(stringResource(ui.rejectedRes), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
-                else -> Text(
-                    stringResource(feedbackRes(ui.feedback)),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (good) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface,
-                )
-            }
+        if (!ui.saving) {
             if (ui.slow) {
                 Text(stringResource(R.string.enroll_slow_hint), style = MaterialTheme.typography.bodyMedium)
             }
@@ -464,14 +468,13 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
                 Text(stringResource(R.string.enroll_relaxed), style = MaterialTheme.typography.bodySmall)
             }
         }
-
+        if (ui.manualAllowed) {
+            Button(onClick = { controls.manualCapture.set(true) }) { Text(stringResource(R.string.enroll_btn_manual)) }
+            Text(stringResource(R.string.enroll_manual_note), style = MaterialTheme.typography.bodySmall)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = { controls.retryStep.set(true) }) { Text(stringResource(R.string.enroll_btn_retry)) }
             OutlinedButton(onClick = { controls.restart.set(true) }) { Text(stringResource(R.string.enroll_btn_restart)) }
-        }
-        if (ui.manualAllowed) {
-            Text(stringResource(R.string.enroll_manual_note), style = MaterialTheme.typography.bodySmall)
-            Button(onClick = { controls.manualCapture.set(true) }) { Text(stringResource(R.string.enroll_btn_manual)) }
         }
 
         // Real numbers measured on this phone while enrolling.
@@ -483,6 +486,7 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
         if (ui.failedRes != 0) {
             Text(stringResource(ui.failedRes), color = MaterialTheme.colorScheme.error)
         }
+        Text(stringResource(R.string.enroll_intro), style = MaterialTheme.typography.bodySmall)
         Text(stringResource(R.string.enroll_hint_sides), style = MaterialTheme.typography.bodySmall)
     }
 }

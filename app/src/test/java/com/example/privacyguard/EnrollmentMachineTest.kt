@@ -114,6 +114,41 @@ class EnrollmentMachineTest {
         assertEquals(5, m.capturedCount)
     }
 
+    @Test fun phoneHeldAtChestHeightWithThirtyDegreesPitchStillWorks() {
+        val m = EnrollmentMachine()
+        assertNotNull(SimulatedUser(neutralYaw = 4f, neutralPitch = 30f).runToEnd(m))
+        assertEquals(5, m.capturedCount)
+    }
+
+    @Test fun captureNowButtonWorksOnStepOneEvenWhenTheFaceIsNotStraight() {
+        // Re-read found this: the button appeared on step 1 but was ignored while the face counted as "not straight".
+        val m = EnrollmentMachine()
+        val u = SimulatedUser(noiseDegrees = 0f)
+        val tilted = PoseSample(0f, 45f, 0f, 0.45f, 0.5f, 0.5f) // beyond even the wide step-1 limit
+        var last: EnrollUpdate? = null
+        repeat(160) { last = u.frame(m, poseOverride = tilted) } // 16 s
+        assertEquals(EnrollFeedback.NOT_STRAIGHT, last!!.feedback)
+        assertTrue("button must be offered", last!!.manualCaptureAllowed)
+        u.frame(m, poseOverride = tilted, manual = true)
+        assertEquals("pressing it must capture step 1", EnrollStep.LEFT, m.step)
+        // and the neutral pose is the pose of that moment, so a 22 degree turn from there still counts
+        val sameUserTilted = SimulatedUser(neutralPitch = 45f, noiseDegrees = 0f).also { it.now = u.now }
+        assertNotNull(sameUserTilted.runToEnd(m))
+    }
+
+    @Test fun captureNowButtonWorksOnStepOneWhenTheFaceKeepsMoving() {
+        val m = EnrollmentMachine()
+        val u = SimulatedUser(noiseDegrees = 0f)
+        var last: EnrollUpdate? = null
+        for (i in 0 until 160) { // 16 s of a head that never holds still (alternating 12 degrees)
+            val p = PoseSample(if (i % 2 == 0) 6f else -6f, 0f, 0f, 0.45f, 0.5f, 0.5f)
+            last = u.frame(m, poseOverride = p)
+        }
+        assertEquals(EnrollFeedback.HOLD_STILL, last!!.feedback)
+        u.frame(m, poseOverride = PoseSample(6f, 0f, 0f, 0.45f, 0.5f, 0.5f), manual = true)
+        assertEquals(EnrollStep.LEFT, m.step)
+    }
+
     @Test fun phoneHeldHighWithNegativeNeutralPitchStillWorks() {
         val m = EnrollmentMachine()
         assertNotNull(SimulatedUser(neutralYaw = -5f, neutralPitch = -14f).runToEnd(m))

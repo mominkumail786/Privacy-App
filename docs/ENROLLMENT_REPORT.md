@@ -22,7 +22,7 @@ without your phone, but the first two are certain from the code.
 
 * **Source:** ML Kit's head angles `headEulerAngleY` (turn), `headEulerAngleX` (nod) and `headEulerAngleZ` (roll). These are real ML Kit properties.
   Facial landmarks are **not** used: I did not need them and they would cost extra time. Face-box movement alone is never used.
-* **Neutral pose first:** step 1 waits until the face is roughly straight (`|yaw| <= 20`, `|pitch| <= 25`) and the angles of the last pictures differ
+* **Neutral pose first:** step 1 waits until the face is roughly straight (`|yaw| <= 25`, `|pitch| <= 35`, wide on purpose so a phone held at chest height does not block it) and the angles of the last pictures differ
   by at most 5 degrees. It then stores YOUR neutral yaw and pitch. All other steps measure the movement **relative to it**.
 * **Needed movement (defaults, configurable in `PoseThresholds`):** turn 12 degrees, nod 8 degrees from your neutral pose. A comfortable turn is
   about 20-30 and a comfortable nod 10-20 degrees; ML Kit's noise is a few degrees. These numbers were **not calibrated on a real phone**.
@@ -64,7 +64,7 @@ The "Capture now" button is the fallback when head angles cannot be measured on 
 
 ## 6. Tests
 
-### Simulated (computer, all pass: 89 unit tests in total; 29 added for this fix and 5 tests of the removed old step rules deleted)
+### Simulated (computer, all pass: 92 unit tests in total; 32 added for this fix and 5 tests of the removed old step rules deleted)
 Closed-loop "simulated user" tests: ideal user; phone held low or high; both ML Kit sign conventions; slow user with small movements; very fast movement
 (hold time still required); one noisy picture; face lost for 4 s; two faces; too small / too big / rolled / off-screen face; face turned away on step 1;
 wrong direction on the second step; tilting while turning; wobble around the limit (hysteresis); relax timing; hint and manual-capture timing; manual capture
@@ -101,3 +101,15 @@ The new Compose/CameraX screen could not be compiled here (those libraries canno
 * I did not verify ML Kit's angle sign convention; the either-side/opposite-side rule avoids depending on it, but the words "left/right/up/down" on screen may be swapped.
 * Real ML Kit time per picture on your phone is unknown until you read it on the screen.
 * The consistency guard 0.30 is a coarse "obviously not the same face" check, not a security feature.
+
+## 8. Second review (after the first successful build)
+
+Re-reading the built code found and fixed:
+
+1. **"Capture now" was ignored on step 1** while the face counted as "not straight" or "not steady": the button appeared after 15 s
+   but pressing it did nothing, so a user could still get stuck on step 1. Fixed: the button always captures when shown (the sample
+   still has to pass the quality checks); the neutral pose is then the pose of that moment. 2 tests added.
+2. **Step 1 still had a narrow absolute limit** (`|pitch| <= 25`). A phone held at chest height can give about 30 degrees, which would
+   repeat the original problem. Widened to yaw 25 / pitch 35. Test added (neutral pitch 30 completes).
+3. **Layout:** the full-width camera preview pushed the instruction, the feedback line and the movement meter below the screen edge,
+   so the user would have to scroll while looking at the camera. Now the instruction, feedback and meter are above a 70% wide preview.

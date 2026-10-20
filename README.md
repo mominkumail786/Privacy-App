@@ -16,7 +16,7 @@ The code was written on a machine that could not reach Google's servers (`dl.goo
 
 | Part | Status |
 |---|---|
-| Pure logic: cosine matching, head-pose rule, 3-of-5 filter, cooldown, enrollment steps, image-quality checks, AES-GCM encrypt/decrypt | **89 unit tests, all pass** (`app/src/test/.../LogicTest.kt`, `RecognitionPolicyTest.kt`). |
+| Pure logic: cosine matching, head-pose rule, 3-of-5 filter, cooldown, enrollment steps, image-quality checks, AES-GCM encrypt/decrypt | **92 unit tests, all pass** (`app/src/test/.../LogicTest.kt`, `RecognitionPolicyTest.kt`). |
 | The whole app (Gradle files, Compose screens, CameraX service, ML Kit, TFLite) | **Builds successfully** on the owner's computer. The only build error found was `compileSdk = 36`, which the current AndroidX libraries reject; it is now `37`. |
 | The face model | **Run** with a TFLite interpreter on sample photos (see section 4). |
 | Running on a real phone | **Installed and tested by the owner on an Android 15 phone, who reported that everything worked.** The result of each single checklist item in section 9 was not written down, so treat section 9 as the list to re-check, especially camera conflict, phone restart, battery use over an hour and false alarms in your own daily use. |
