@@ -3,7 +3,6 @@ package com.example.privacyguard
 import com.example.privacyguard.logic.AlertCooldown
 import com.example.privacyguard.logic.CalibrationQuality
 import com.example.privacyguard.logic.EnrollmentCheck
-import com.example.privacyguard.logic.EnrollmentSession
 import com.example.privacyguard.logic.EventLogFormat
 import com.example.privacyguard.logic.EventType
 import com.example.privacyguard.logic.FailureMonitor
@@ -177,18 +176,25 @@ class EnrollmentCheckTest {
         assertFalse(r.ok)
     }
 
+    @Test fun aSampleOfAnotherFaceIsRejectedWhenTakenNotLater() {
+        val first = sample(0.0)
+        assertTrue(EnrollmentCheck.isSameFace(first, sample(40.0)))   // turned head: still the same face
+        assertFalse(EnrollmentCheck.isSameFace(first, sample(85.0)))  // clearly another face
+    }
+
+    @Test fun brokenEmbeddingsAreRejected() {
+        assertTrue(EnrollmentCheck.isValidEmbedding(floatArrayOf(1f, 0f, 0f), 3))
+        assertFalse(EnrollmentCheck.isValidEmbedding(floatArrayOf(1f, 0f), 3))                 // wrong length
+        assertFalse(EnrollmentCheck.isValidEmbedding(floatArrayOf(Float.NaN, 0f, 0f), 3))       // not a number
+        assertFalse(EnrollmentCheck.isValidEmbedding(floatArrayOf(Float.POSITIVE_INFINITY, 0f, 0f), 3))
+        assertFalse(EnrollmentCheck.isValidEmbedding(floatArrayOf(0f, 0f, 0f), 3))              // all zero
+        assertFalse(EnrollmentCheck.isValidEmbedding(floatArrayOf(9f, 9f, 9f), 3))              // not normalised
+    }
+
     @Test fun tooFewSamplesAreRejected() {
         val r = EnrollmentCheck.verify(listOf(sample(0.0), sample(1.0)))
         assertFalse(r.ok)
         assertNull(r.profile)
-    }
-
-    @Test fun enrollmentCanRestartFromTheFirstStep() {
-        val s = EnrollmentSession()
-        s.onCaptured(0f, 0f); s.onCaptured(20f, 0f)
-        s.reset()
-        assertEquals(0, s.index)
-        assertFalse(s.poseMatches(25f, 0f)) // FRONT needs a straight head again
     }
 }
 

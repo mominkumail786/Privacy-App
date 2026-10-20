@@ -4,27 +4,72 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Checks the 5 enrollment pictures before the profile is saved.
- * Every picture must look like the average of all pictures. If one does not, the pictures were
- * probably not all of the same person, or one was bad (turned away, dark, blocked).
+ * Checks for the enrollment samples.
+ *
+ * Each sample is checked when it is taken (is it a valid embedding, and does it look like the first sample?).
+ * A bad sample only repeats ITS step. It never throws the other steps away.
  */
 object EnrollmentCheck {
     const val REQUIRED_SAMPLES = 5
 
-    // Measured with the real model: sets of photos of one person had every picture at 0.56-0.60 or
-    // more from the average, while sets that contained a different person often fell lower
-    // (median 0.51). Only 2 people in the test data had 3+ photos, so this is a sanity check
-    // that catches obvious mistakes, not a security feature.
-    const val MIN_SAMPLE_SIMILARITY = 0.50f
+    // A new sample must look at least this much like the first (straight) sample. Only an "obviously a
+    // different person or a broken picture" guard: in the measurements different people reached 0.30 or more
+    // in only 5% of the pairs on clean photos, while the same person was below 0.38 in only 5% of
+    // photo pairs taken on different days. Pictures from one enrollment session look more alike than that.
+    // The earlier rule (every sample >= 0.50 from the average, all-or-nothing) was too strict for turned heads.
+    const val MIN_PAIR_SIMILARITY = 0.30f
+
+    /** True if [e] is a usable vector of the model's size: right length, finite numbers, length close to 1. */
+    fun isValidEmbedding(e: FloatArray, expectedSize: Int): Boolean {
+        if (e.size != expectedSize) return false
+        var sum = 0.0
+        for (x in e) {
+            if (!x.isFinite()) return false
+            sum += x * x
+        }
+        val length = Math.sqrt(sum)
+        return length in 0.5..1.5
+    }
+
+    /** Does [candidate] look like the same face as the first (straight) sample? */
+    fun isSameFace(first: FloatArray, candidate: FloatArray): Boolean =
+        FaceMath.cosineSimilarity(first, candidate) >= MIN_PAIR_SIMILARITY
 
     class Result(val ok: Boolean, val lowestSimilarity: Float, val profile: FloatArray?)
 
+    /** Final sanity check before saving: 5 valid samples that all agree with their average. */
     fun verify(samples: List<FloatArray>): Result {
         if (samples.size < REQUIRED_SAMPLES) return Result(false, 0f, null)
+        val size = samples[0].size
+        if (samples.any { !isValidEmbedding(it, size) }) return Result(false, 0f, null)
         val profile = FaceMath.averageProfile(samples)
         val lowest = samples.minOf { FaceMath.cosineSimilarity(it, profile) }
-        return Result(lowest >= MIN_SAMPLE_SIMILARITY, lowest, profile)
+        return Result(lowest >= MIN_PAIR_SIMILARITY, lowest, profile)
     }
+}
+
+/**
+ * Measures how fast pictures are processed: pictures per second (last 2 seconds) and the average time
+ * one picture needs from camera to result. Used to show real numbers on the enrollment screen.
+ */
+class FrameRateMeter(private val windowMs: Long = 2_000) {
+    private val times = ArrayDeque<Long>()
+
+    var averageLatencyMs = 0f
+        private set
+
+    fun record(nowMs: Long, latencyMs: Long) {
+        times.addLast(nowMs)
+        while (times.isNotEmpty() && nowMs - times.first() > windowMs) times.removeFirst()
+        averageLatencyMs = if (averageLatencyMs == 0f) latencyMs.toFloat() else averageLatencyMs * 0.8f + latencyMs * 0.2f
+    }
+
+    val picturesPerSecond: Float
+        get() {
+            if (times.size < 2) return 0f
+            val span = times.last() - times.first()
+            return if (span <= 0) 0f else (times.size - 1) * 1000f / span
+        }
 }
 
 enum class CalibrationQuality {
@@ -140,6 +185,8 @@ enum class EventType {
     ANALYSIS_FAILING,
     ANALYSIS_RECOVERED,
     PROFILE_INVALID,
+    /** Enrollment finished; the stored number is the time it took, in seconds. */
+    ENROLLMENT_DONE,
 }
 
 /** One line of the event log. Contains no pictures and no face data: only time, kind and a similarity number. */

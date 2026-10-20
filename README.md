@@ -5,6 +5,8 @@ An Android app (Kotlin, Jetpack Compose) that watches the **front camera** while
 > **Status:** the app builds with `./gradlew assembleDebug` (AGP 9.4.0, Gradle 9.6.0, `compileSdk = 37`), was installed on a real Android 15 phone and the owner reported that it worked. See "What was and was not verified" for exactly what that does and does not cover.
 >
 > **Recognition update:** the recognition and alert logic was audited and improved (uncertain zone, calibration on your phone, enrollment verification, degraded-state detection, event log). Read `docs/RECOGNITION_REPORT.md` for the findings, the measured threshold numbers and an honest list of tests that were run and not run. **That update has not been built yet: build it and tell me about any compiler error.**
+>
+> **Enrollment fix:** the 5-step face enrollment was reworked (neutral pose, small relative movements, state machine, no stale frames, live meter). Read `docs/ENROLLMENT_REPORT.md` for the root cause, how it works and which tests were simulated and which still need your phone.
 
 ---
 
@@ -14,7 +16,7 @@ The code was written on a machine that could not reach Google's servers (`dl.goo
 
 | Part | Status |
 |---|---|
-| Pure logic: cosine matching, head-pose rule, 3-of-5 filter, cooldown, enrollment steps, image-quality checks, AES-GCM encrypt/decrypt | **65 unit tests, all pass** (`app/src/test/.../LogicTest.kt`, `RecognitionPolicyTest.kt`). |
+| Pure logic: cosine matching, head-pose rule, 3-of-5 filter, cooldown, enrollment steps, image-quality checks, AES-GCM encrypt/decrypt | **89 unit tests, all pass** (`app/src/test/.../LogicTest.kt`, `RecognitionPolicyTest.kt`). |
 | The whole app (Gradle files, Compose screens, CameraX service, ML Kit, TFLite) | **Builds successfully** on the owner's computer. The only build error found was `compileSdk = 36`, which the current AndroidX libraries reject; it is now `37`. |
 | The face model | **Run** with a TFLite interpreter on sample photos (see section 4). |
 | Running on a real phone | **Installed and tested by the owner on an Android 15 phone, who reported that everything worked.** The result of each single checklist item in section 9 was not written down, so treat section 9 as the list to re-check, especially camera conflict, phone restart, battery use over an hour and false alarms in your own daily use. |
@@ -149,7 +151,7 @@ app/src/main/java/com/example/privacyguard/
   ui/      Theme.kt  Components.kt  OnboardingScreen.kt  HomeScreen.kt  EnrollmentScreen.kt
            CalibrationScreen.kt  SettingsScreen.kt  InfoScreens.kt (About + Battery help + Event log)
   util/    Permissions.kt
-app/src/test/java/com/example/privacyguard/LogicTest.kt, RecognitionPolicyTest.kt, DeveloperCreditTest.kt
+app/src/test/java/com/example/privacyguard/LogicTest.kt, RecognitionPolicyTest.kt, DeveloperCreditTest.kt, EnrollmentMachineTest.kt
 docs/RECOGNITION_REPORT.md                        audit, measured thresholds, test status
 tools/threshold_experiment/                       scripts that produced the threshold numbers
 ```

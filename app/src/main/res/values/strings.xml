@@ -56,14 +56,14 @@
 
     <!-- Enrollment -->
     <string name="enroll_title">Face profile</string>
-    <string name="enroll_intro">Sit in a bright place and look at the camera. We take 5 pictures from different angles. The pictures are NOT saved. Only a list of numbers is kept, encrypted.</string>
+    <string name="enroll_intro">Sit in a bright place and look at the camera. We take 5 pictures: straight, then a small turn to each side, then a small nod up and down. Small, natural movements are enough. Only a list of numbers is kept, encrypted. The pictures are NOT saved.</string>
     <string name="enroll_step_format">Step %1$d of 5</string>
-    <string name="enroll_front">Look straight at the camera</string>
-    <string name="enroll_left">Slowly turn your head to the LEFT</string>
-    <string name="enroll_right">Now turn your head to the RIGHT</string>
-    <string name="enroll_up">Tilt your head UP a little</string>
-    <string name="enroll_down">Now tilt your head DOWN a little</string>
-    <string name="enroll_hint_sides">If left and right feel swapped, it does not matter. Both sides are captured.</string>
+    <string name="enroll_front">Look straight at the camera and hold still</string>
+    <string name="enroll_left">Turn your head a little to the LEFT</string>
+    <string name="enroll_right">Now turn a little to the RIGHT</string>
+    <string name="enroll_up">Tilt your head a little UP</string>
+    <string name="enroll_down">Now tilt a little DOWN</string>
+    <string name="enroll_hint_sides">If left and right (or up and down) feel swapped, it does not matter: the second movement just has to go the opposite way of the first.</string>
     <string name="enroll_no_face">No face found. Move into the picture.</string>
     <string name="enroll_many_faces">Only one face please. Make sure nobody else is in view.</string>
     <string name="enroll_too_far">Move a bit closer.</string>
@@ -72,7 +72,6 @@
     <string name="enroll_dark">Too dark. Move to a brighter place.</string>
     <string name="enroll_bright">Too bright. Avoid strong light on your face.</string>
     <string name="enroll_blurry">Picture is blurry. Hold still.</string>
-    <string name="enroll_hold">Good. Hold still...</string>
     <string name="enroll_captured">Captured!</string>
     <string name="enroll_saving">Saving your encrypted profile...</string>
     <string name="enroll_error">Something went wrong. Please try again.</string>
@@ -159,7 +158,6 @@
     <string name="settings_calibrate">Calibrate on this phone</string>
 
     <string name="enroll_center">Move your face into the oval.</string>
-    <string name="enroll_inconsistent">The 5 pictures did not look like the same person, so nothing was saved. Please start again in good light, with only your face in view.</string>
 
     <string name="calib_title">Calibrate</string>
     <string name="calib_intro">This measures how well the app recognises YOU on this phone, and (optional) how another person scores. Then it suggests the numbers. Step 1: look at the screen for about 10 seconds. Only you may be in view.</string>
@@ -193,4 +191,28 @@
     <string name="about_developer_summary">Watches the front camera and warns you when another person may be looking at your screen. Everything is processed on your phone.</string>
     <string name="developer_credit">Made by Nurbhanej Anvarali and Momin Kumail</string>
     <string name="developer_role">2nd Year CE Student at LDCE, Ahmedabad</string>
+
+    <!-- Enrollment: live feedback, controls, timing -->
+    <string name="fb_starting">Starting camera...</string>
+    <string name="fb_not_straight">Face the camera more directly.</string>
+    <string name="fb_move_more">Move a little more.</string>
+    <string name="fb_wrong_direction">Other way: go to the opposite side of the last movement.</string>
+    <string name="fb_off_axis">Move in one direction only: do not tilt while turning (or turn while nodding).</string>
+    <string name="fb_hold">Good! Hold still...</string>
+    <string name="fb_ready">Good!</string>
+    <string name="enroll_meter">Movement: %1$d° of %2$d°</string>
+    <string name="enroll_slow_hint">Taking long? Move a little more, keep your whole face in the picture, and check the light.</string>
+    <string name="enroll_relaxed">Easier mode: a smaller movement is accepted now.</string>
+    <string name="enroll_btn_retry">Retry this step</string>
+    <string name="enroll_btn_restart">Restart</string>
+    <string name="enroll_btn_manual">Capture now</string>
+    <string name="enroll_manual_note">If the app cannot measure your head movement, you can take this picture by hand. It must still show your face clearly and look like the first picture.</string>
+    <string name="enroll_time">Time: %1$d s</string>
+    <string name="enroll_perf">%1$d pictures/s, %2$d ms each</string>
+    <string name="enroll_not_same">That picture does not look like the first one. Only your face, please. Try again.</string>
+    <string name="enroll_bad_sample">That picture could not be used. Try again.</string>
+    <string name="enroll_no_permission">Camera permission is needed to create the face profile.</string>
+    <string name="enroll_detect_failed">Face detection keeps failing. Close this screen and open it again.</string>
+    <string name="enroll_error_save">The profile could not be saved safely. Your old profile (if any) was not changed. Press Restart to try again.</string>
+    <string name="event_enrollment_done">Face profile created (seconds it took)</string>
 </resources>

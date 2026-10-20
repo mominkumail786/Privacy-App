@@ -91,6 +91,7 @@ private fun eventLabel(type: EventType): Int = when (type) {
     EventType.ANALYSIS_FAILING -> R.string.event_analysis_failing
     EventType.ANALYSIS_RECOVERED -> R.string.event_analysis_recovered
     EventType.PROFILE_INVALID -> R.string.event_profile_invalid
+    EventType.ENROLLMENT_DONE -> R.string.event_enrollment_done
 }
 
 /** The last events: alerts, camera busy, errors. Only time, kind and a similarity number. No pictures. */

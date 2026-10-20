@@ -2,58 +2,8 @@ package com.example.privacyguard.logic
 
 import kotlin.math.abs
 
-/** The five head positions we capture during enrollment. */
+/** The five head positions we capture during enrollment (the logic is in EnrollmentMachine.kt). */
 enum class EnrollStep { FRONT, LEFT, RIGHT, UP, DOWN }
-
-/**
- * Keeps track of which enrollment step we are on and checks the head angle for it.
- *
- * Why the angle signs are not hard-coded: the sign of ML Kit's headEulerAngleY/X depends on the
- * camera mirroring, and I could not test it on a real phone. So LEFT accepts a turn to either side,
- * and RIGHT then requires the OPPOSITE side. Same for UP / DOWN. Both sides always get captured,
- * even if the on-screen words "left" and "right" are swapped on your phone.
- */
-class EnrollmentSession {
-    val steps: List<EnrollStep> = EnrollStep.entries
-    var index = 0
-        private set
-
-    private var turnSign = 0 // sign of yaw seen at the LEFT step
-    private var tiltSign = 0 // sign of pitch seen at the UP step
-
-    /** Starts again from the first step (used when the 5 pictures turned out to be inconsistent). */
-    fun reset() {
-        index = 0
-        turnSign = 0
-        tiltSign = 0
-    }
-
-    val isFinished get() = index >= steps.size
-    val currentStep get() = steps[index]
-
-    /** Is the head in the right position for the current step? */
-    fun poseMatches(yaw: Float, pitch: Float): Boolean = when (currentStep) {
-        EnrollStep.FRONT -> abs(yaw) < FRONT_LIMIT && abs(pitch) < FRONT_LIMIT
-        EnrollStep.LEFT -> abs(yaw) >= TURN_MIN && abs(pitch) < OTHER_AXIS_MAX
-        EnrollStep.RIGHT -> turnSign != 0 && yaw * turnSign <= -TURN_MIN && abs(pitch) < OTHER_AXIS_MAX
-        EnrollStep.UP -> abs(pitch) >= TILT_MIN && abs(yaw) < OTHER_AXIS_MAX
-        EnrollStep.DOWN -> tiltSign != 0 && pitch * tiltSign <= -TILT_MIN && abs(yaw) < OTHER_AXIS_MAX
-    }
-
-    /** Call after a good picture was taken. Remembers the signs and moves to the next step. */
-    fun onCaptured(yaw: Float, pitch: Float) {
-        if (currentStep == EnrollStep.LEFT) turnSign = if (yaw > 0) 1 else -1
-        if (currentStep == EnrollStep.UP) tiltSign = if (pitch > 0) 1 else -1
-        index++
-    }
-
-    companion object {
-        const val FRONT_LIMIT = 12f
-        const val TURN_MIN = 18f
-        const val TILT_MIN = 12f
-        const val OTHER_AXIS_MAX = 20f
-    }
-}
 
 /** Simple picture-quality checks on a small grey (0..255) face crop. */
 object ImageQuality {

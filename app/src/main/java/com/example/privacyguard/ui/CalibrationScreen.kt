@@ -52,6 +52,7 @@ import java.util.Collections
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -117,6 +118,7 @@ private fun CalibrationCamera(activity: ComponentActivity, profile: FloatArray, 
         val finder = FaceFinder()
         val embedder = FaceEmbedder(activity)
         var lastAnalyzedAt = 0L
+        val busy = AtomicBoolean(false) // one picture at a time; newer ones are dropped
 
         val analysis = ImageAnalysis.Builder()
             .setResolutionSelector(
@@ -132,7 +134,7 @@ private fun CalibrationCamera(activity: ComponentActivity, profile: FloatArray, 
         analysis.setAnalyzer(executor) { image ->
             val now = SystemClock.elapsedRealtime()
             val mode = recording.get()
-            if (mode == 0 || now - lastAnalyzedAt < MIN_GAP_MS) {
+            if (mode == 0 || now - lastAnalyzedAt < MIN_GAP_MS || !busy.compareAndSet(false, true)) {
                 image.close()
             } else {
                 lastAnalyzedAt = now
@@ -143,7 +145,9 @@ private fun CalibrationCamera(activity: ComponentActivity, profile: FloatArray, 
                 } finally {
                     image.close()
                 }
-                if (bitmap != null) {
+                if (bitmap == null) {
+                    busy.set(false)
+                } else {
                     finder.find(bitmap, safeExecutor) { faces ->
                         try {
                             if (faces != null && recording.get() == mode) {
@@ -177,6 +181,7 @@ private fun CalibrationCamera(activity: ComponentActivity, profile: FloatArray, 
                             mainHandler.post { failed = true }
                         } finally {
                             bitmap.recycle() // pictures are never kept
+                            busy.set(false)
                         }
                     }
                 }

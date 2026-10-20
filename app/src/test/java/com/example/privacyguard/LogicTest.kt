@@ -3,8 +3,6 @@ package com.example.privacyguard
 import com.example.privacyguard.data.AesGcmBox
 import com.example.privacyguard.data.FloatBytes
 import com.example.privacyguard.logic.AlertCooldown
-import com.example.privacyguard.logic.EnrollStep
-import com.example.privacyguard.logic.EnrollmentSession
 import com.example.privacyguard.logic.FaceMath
 import com.example.privacyguard.logic.FacePose
 import com.example.privacyguard.logic.ImageQuality
@@ -157,48 +155,6 @@ class AlertCooldownTest {
         assertTrue(c.tryAlert(0))
         ms = 5_000L
         assertTrue(c.tryAlert(6_000))
-    }
-}
-
-class EnrollmentSessionTest {
-    private fun session() = EnrollmentSession()
-
-    @Test fun startsAtFrontAndNeedsStraightHead() {
-        val s = session()
-        assertEquals(EnrollStep.FRONT, s.currentStep)
-        assertTrue(s.poseMatches(2f, -3f))
-        assertFalse(s.poseMatches(30f, 0f))
-    }
-
-    @Test fun rightRequiresTheOppositeSideOfLeft() {
-        val s = session()
-        s.onCaptured(0f, 0f)             // FRONT done
-        assertEquals(EnrollStep.LEFT, s.currentStep)
-        assertFalse(s.poseMatches(5f, 0f))
-        assertTrue(s.poseMatches(-25f, 0f))
-        s.onCaptured(-25f, 0f)           // LEFT done (negative side)
-        assertEquals(EnrollStep.RIGHT, s.currentStep)
-        assertFalse(s.poseMatches(-25f, 0f)) // same side again: rejected
-        assertTrue(s.poseMatches(25f, 0f))
-    }
-
-    @Test fun downRequiresTheOppositeTiltOfUp() {
-        val s = session()
-        s.onCaptured(0f, 0f); s.onCaptured(20f, 0f); s.onCaptured(-20f, 0f)
-        assertEquals(EnrollStep.UP, s.currentStep)
-        assertTrue(s.poseMatches(0f, 15f))
-        s.onCaptured(0f, 15f)
-        assertEquals(EnrollStep.DOWN, s.currentStep)
-        assertFalse(s.poseMatches(0f, 15f))
-        assertTrue(s.poseMatches(0f, -15f))
-        s.onCaptured(0f, -15f)
-        assertTrue(s.isFinished)
-    }
-
-    @Test fun turningAndTiltingAtTheSameTimeIsRejected() {
-        val s = session()
-        s.onCaptured(0f, 0f)
-        assertFalse(s.poseMatches(25f, 40f))
     }
 }
 

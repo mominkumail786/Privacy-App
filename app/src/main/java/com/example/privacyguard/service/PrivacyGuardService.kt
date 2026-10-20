@@ -46,6 +46,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 
 /**
@@ -100,6 +101,9 @@ class PrivacyGuardService : LifecycleService() {
     private val failures = FailureMonitor()
     @Volatile private var degraded = false
     private lateinit var eventLog: EventLogStore
+
+    // True while one picture is being analysed. Newer camera pictures are dropped meanwhile, so no queue of old pictures builds up.
+    private val detecting = AtomicBoolean(false)
 
     // Used only on the analysis thread.
     private var lastAnalyzedAt = 0L
@@ -421,7 +425,7 @@ class PrivacyGuardService : LifecycleService() {
             mainHandler.post { publishStatus() }
         }
         // Only about 2-3 frames per second are analysed. All other frames are dropped right away.
-        if (now - lastAnalyzedAt < FRAME_GAP_MS) {
+        if (now - lastAnalyzedAt < FRAME_GAP_MS || !detecting.compareAndSet(false, true)) {
             image.close()
             return
         }
@@ -437,27 +441,36 @@ class PrivacyGuardService : LifecycleService() {
         val faceFinder = finder
         if (faceFinder == null) {
             bitmap?.recycle()
+            detecting.set(false)
             return
         }
         if (bitmap == null) {
             recordFailure() // the camera picture could not be converted
+            detecting.set(false)
             return
         }
 
-        faceFinder.find(bitmap, safeExecutor) { faces ->
-            try {
-                if (faces == null) {
-                    recordFailure() // ML Kit could not process this picture
-                } else {
-                    handleFaces(bitmap, faces)
-                    recordSuccess()
+        try {
+            faceFinder.find(bitmap, safeExecutor) { faces ->
+                try {
+                    if (faces == null) {
+                        recordFailure() // ML Kit could not process this picture
+                    } else {
+                        handleFaces(bitmap, faces)
+                        recordSuccess()
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Frame analysis failed", e)
+                    recordFailure() // for example the embedding model threw an exception
+                } finally {
+                    bitmap.recycle() // the frame is discarded; it was never saved
+                    detecting.set(false)
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Frame analysis failed", e)
-                recordFailure() // for example the embedding model threw an exception
-            } finally {
-                bitmap.recycle() // the frame is discarded; it was never saved
             }
+        } catch (e: Exception) {
+            bitmap.recycle()
+            detecting.set(false)
+            recordFailure()
         }
     }
 
