@@ -3,6 +3,7 @@ package com.example.privacyguard.ui
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.privacyguard.R
 import com.example.privacyguard.data.AppSettings
@@ -45,7 +49,11 @@ fun SettingsScreen(context: Context, onOpenBatteryHelp: () -> Unit, onCalibrate:
     var cooldown by remember { mutableIntStateOf(settings.cooldownSeconds) }
     var confirmDelete by remember { mutableStateOf(false) }
 
-    ScreenScaffold(title = stringResource(R.string.settings_title), onBack = onBack) {
+    ScreenScaffold(
+        title = stringResource(R.string.settings_title),
+        onBack = onBack,
+        footer = { AboutAndDeveloper(context) },
+    ) {
 
         // ----- Sensitivity -----
         Text(stringResource(R.string.settings_sensitivity), style = MaterialTheme.typography.titleLarge)
@@ -186,4 +194,62 @@ fun SettingsScreen(context: Context, onOpenBatteryHelp: () -> Unit, onCalibrate:
             },
         )
     }
+}
+
+/**
+ * "About and Developer" block at the very bottom of Settings.
+ * Colours and fonts come from the app theme, so light and dark mode work automatically.
+ * Text wraps instead of being cut off, so it also fits small screens.
+ */
+@Composable
+private fun AboutAndDeveloper(context: Context) {
+    val version = remember { appVersion(context) }
+
+    HorizontalDivider()
+    Text(stringResource(R.string.about_developer_title), style = MaterialTheme.typography.titleLarge)
+    Text(
+        stringResource(R.string.app_name) + "  \u2022  " + stringResource(R.string.about_version, version),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Text(
+        stringResource(R.string.about_developer_summary),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+
+    // The developer credit: centred, small and quiet, with a short divider above it.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        HorizontalDivider(modifier = Modifier.fillMaxWidth(0.4f))
+        Text(
+            text = stringResource(R.string.developer_credit),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        )
+        Text(
+            text = stringResource(R.string.developer_role),
+            style = MaterialTheme.typography.bodyMedium,
+            fontStyle = FontStyle.Italic,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Suppress("DEPRECATION")
+private fun appVersion(context: Context): String = try {
+    context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0"
+} catch (e: Exception) {
+    "1.0"
 }

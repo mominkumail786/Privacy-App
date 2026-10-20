@@ -186,4 +186,11 @@
 
     <string name="about_p8">No photo or video check (liveness). A photo or a video of the owner shown to the camera may be accepted as the owner. The app does not detect this.</string>
     <string name="about_p9">Recognition is not perfect. The match score depends on light and camera quality. When the app is not sure it says so and, by default, does not alert. You can calibrate on this phone in Settings.</string>
+
+    <!-- About and developer (bottom of Settings) -->
+    <string name="about_developer_title">About &amp; Developer</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_developer_summary">Watches the front camera and warns you when another person may be looking at your screen. Everything is processed on your phone.</string>
+    <string name="developer_credit">Made by Nurbhanej Anvarali and Momin Kumail</string>
+    <string name="developer_role">2nd Year CE Student at LDCE, Ahmedabad</string>
 </resources>

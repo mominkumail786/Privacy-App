@@ -14,7 +14,7 @@ The code was written on a machine that could not reach Google's servers (`dl.goo
 
 | Part | Status |
 |---|---|
-| Pure logic: cosine matching, head-pose rule, 3-of-5 filter, cooldown, enrollment steps, image-quality checks, AES-GCM encrypt/decrypt | **62 unit tests, all pass** (`app/src/test/.../LogicTest.kt`, `RecognitionPolicyTest.kt`). |
+| Pure logic: cosine matching, head-pose rule, 3-of-5 filter, cooldown, enrollment steps, image-quality checks, AES-GCM encrypt/decrypt | **65 unit tests, all pass** (`app/src/test/.../LogicTest.kt`, `RecognitionPolicyTest.kt`). |
 | The whole app (Gradle files, Compose screens, CameraX service, ML Kit, TFLite) | **Builds successfully** on the owner's computer. The only build error found was `compileSdk = 36`, which the current AndroidX libraries reject; it is now `37`. |
 | The face model | **Run** with a TFLite interpreter on sample photos (see section 4). |
 | Running on a real phone | **Installed and tested by the owner on an Android 15 phone, who reported that everything worked.** The result of each single checklist item in section 9 was not written down, so treat section 9 as the list to re-check, especially camera conflict, phone restart, battery use over an hour and false alarms in your own daily use. |
@@ -149,7 +149,7 @@ app/src/main/java/com/example/privacyguard/
   ui/      Theme.kt  Components.kt  OnboardingScreen.kt  HomeScreen.kt  EnrollmentScreen.kt
            CalibrationScreen.kt  SettingsScreen.kt  InfoScreens.kt (About + Battery help + Event log)
   util/    Permissions.kt
-app/src/test/java/com/example/privacyguard/LogicTest.kt, RecognitionPolicyTest.kt
+app/src/test/java/com/example/privacyguard/LogicTest.kt, RecognitionPolicyTest.kt, DeveloperCreditTest.kt
 docs/RECOGNITION_REPORT.md                        audit, measured thresholds, test status
 tools/threshold_experiment/                       scripts that produced the threshold numbers
 ```
@@ -160,7 +160,7 @@ tools/threshold_experiment/                       scripts that produced the thre
 
 **Module 1 - Setup and manifest.** Build and install. The app opens. In phone Settings > Apps > AI Privacy Guard > Permissions you see Camera and Notifications, and no Internet/Network entry.
 
-**Module 2 - Onboarding and settings.** First start shows 4 short pages. On the last page tap "Allow" for camera and notifications. Try "Don't allow" twice: the card changes to "Android will not ask again" with an "Open app settings" button. Open Settings in the app: change sensitivity (the sliders move), switch vibration, move the cooldown slider, close and reopen the app: values are kept. Open "Battery help": it shows ON/OFF, and "Turn off battery optimization" opens the system dialog.
+**Module 2 - Onboarding and settings.** First start shows 4 short pages. On the last page tap "Allow" for camera and notifications. Try "Don't allow" twice: the card changes to "Android will not ask again" with an "Open app settings" button. Open Settings in the app: change sensitivity (the sliders move), switch vibration, move the cooldown slider, close and reopen the app: values are kept. The bottom of Settings has an "About & Developer" block with the app version and the developer credit. Open "Battery help": it shows ON/OFF, and "Turn off battery optimization" opens the system dialog.
 
 **Module 3 - Face enrollment.** Make sure the model is downloaded. Main screen > "Create my face profile". Follow the 5 steps; each picture is taken by itself after you hold still. Try covering the camera or putting a second face in view: you get a message and no picture. At the end the main screen says "Face profile: saved". Then Settings > "Delete my face profile" > Delete: the main screen says "not created yet" again.
 

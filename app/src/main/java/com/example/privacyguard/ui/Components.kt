@@ -34,6 +34,7 @@ import com.example.privacyguard.util.Permissions
 fun ScreenScaffold(
     title: String,
     onBack: (() -> Unit)? = null,
+    footer: (@Composable ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -49,6 +50,8 @@ fun ScreenScaffold(
         if (onBack != null) {
             OutlinedButton(onClick = onBack) { Text(stringResource(R.string.back)) }
         }
+        // Very last thing on the screen (used by Settings for the About / developer credit).
+        footer?.invoke(this)
     }
 }
 
