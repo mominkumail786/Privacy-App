@@ -21,7 +21,9 @@ import com.example.privacyguard.data.AppSettings
 import com.example.privacyguard.service.Notifier
 import com.example.privacyguard.ui.AboutScreen
 import com.example.privacyguard.ui.BatteryHelpScreen
+import com.example.privacyguard.ui.CalibrationScreen
 import com.example.privacyguard.ui.EnrollmentScreen
+import com.example.privacyguard.ui.EventLogScreen
 import com.example.privacyguard.ui.HomeScreen
 import com.example.privacyguard.ui.OnboardingScreen
 import com.example.privacyguard.ui.PrivacyGuardTheme
@@ -117,9 +119,12 @@ private fun AppRoot(
         Screen.SETTINGS -> SettingsScreen(
             context = activity,
             onOpenBatteryHelp = { screen = Screen.BATTERY },
+            onCalibrate = { screen = Screen.CALIBRATE },
             onBack = { screen = Screen.HOME },
         )
 
+        Screen.CALIBRATE -> CalibrationScreen(activity = activity, onDone = { screen = Screen.SETTINGS })
+        Screen.EVENTS -> EventLogScreen(context = activity, onBack = { screen = Screen.HOME })
         Screen.ABOUT -> AboutScreen(onBack = { screen = Screen.HOME })
         Screen.BATTERY -> BatteryHelpScreen(activity = activity, refreshTick = refreshTick, onBack = { screen = Screen.HOME })
     }

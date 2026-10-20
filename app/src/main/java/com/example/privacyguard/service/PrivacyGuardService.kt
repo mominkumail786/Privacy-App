@@ -29,16 +29,19 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import com.example.privacyguard.data.AppSettings
+import com.example.privacyguard.data.EventLogStore
 import com.example.privacyguard.data.ProfileStore
 import com.example.privacyguard.face.FaceEmbedder
 import com.example.privacyguard.face.FaceFinder
 import com.example.privacyguard.face.FaceImages
 import com.example.privacyguard.face.FoundFace
 import com.example.privacyguard.logic.AlertCooldown
+import com.example.privacyguard.logic.EventType
+import com.example.privacyguard.logic.FailureMonitor
+import com.example.privacyguard.logic.FrameState
 import com.example.privacyguard.logic.OtherPersonDetector
 import com.example.privacyguard.logic.TemporalFilter
 import com.example.privacyguard.util.Permissions
-import java.util.Locale
 import java.util.concurrent.Executor
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -93,6 +96,11 @@ class PrivacyGuardService : LifecycleService() {
     @Volatile private var cameraBusy = false
     @Volatile private var lastFrameAt = 0L
 
+    // Face analysis failing again and again must be visible: "Active" would be a lie.
+    private val failures = FailureMonitor()
+    @Volatile private var degraded = false
+    private lateinit var eventLog: EventLogStore
+
     // Used only on the analysis thread.
     private var lastAnalyzedAt = 0L
     private var filter = TemporalFilter(5, 3)
@@ -105,6 +113,7 @@ class PrivacyGuardService : LifecycleService() {
         super.onCreate()
         settings = AppSettings(this)
         powerManager = getSystemService(PowerManager::class.java)
+        eventLog = EventLogStore(this)
         Notifier.createChannels(this)
     }
 
@@ -136,6 +145,7 @@ class PrivacyGuardService : LifecycleService() {
         }
 
         settings.protectionWanted = true
+        eventLog.add(EventType.PROTECTION_STARTED)
         screenOn = powerManager.isInteractive
         registerScreenReceiver()
         applyState()
@@ -171,7 +181,16 @@ class PrivacyGuardService : LifecycleService() {
             return false
         }
         return try {
-            embedder = FaceEmbedder(this)
+            val newEmbedder = FaceEmbedder(this)
+            embedder = newEmbedder
+            // A profile made by a different model has another length and can never be compared.
+            // Without this check every picture would fail silently.
+            if (profile?.size != newEmbedder.embeddingSize) {
+                Log.e(TAG, "Profile size ${profile?.size} does not match model size ${newEmbedder.embeddingSize}")
+                eventLog.add(EventType.PROFILE_INVALID)
+                endStatus = GuardStatus.SETUP_NEEDED
+                return false
+            }
             finder = FaceFinder()
             true
         } catch (e: Exception) {
@@ -203,8 +222,10 @@ class PrivacyGuardService : LifecycleService() {
         }
         analysisExecutor.shutdown()
 
+        if (started) eventLog.add(EventType.PROTECTION_STOPPED)
         GuardState.status = endStatus
-        GuardState.debugLine = ""
+        GuardState.detection = null
+        GuardState.lastScore = null
         super.onDestroy()
     }
 
@@ -224,13 +245,20 @@ class PrivacyGuardService : LifecycleService() {
             !screenOn -> GuardStatus.PAUSED_SCREEN_OFF
             lowBattery -> GuardStatus.PAUSED_LOW_BATTERY
             cameraBusy -> GuardStatus.PAUSED_CAMERA_BUSY
+            degraded -> GuardStatus.DEGRADED
             else -> GuardStatus.ACTIVE
         }
         if (status != GuardState.status) {
+            val before = GuardState.status
             GuardState.status = status
             Notifier.updateStatus(this, getString(status.textRes))
+            if (status == GuardStatus.PAUSED_CAMERA_BUSY) eventLog.add(EventType.CAMERA_BUSY)
+            if (before == GuardStatus.PAUSED_CAMERA_BUSY && status == GuardStatus.ACTIVE) eventLog.add(EventType.CAMERA_RESUMED)
         }
-        if (status != GuardStatus.ACTIVE) GuardState.debugLine = ""
+        if (status != GuardStatus.ACTIVE) {
+            GuardState.detection = null
+            GuardState.lastScore = null
+        }
     }
 
     /** Runs every few seconds: re-checks everything and retries the camera if it is busy or silent. */
@@ -407,16 +435,46 @@ class PrivacyGuardService : LifecycleService() {
             image.close() // we have our own copy now; give the camera buffer back
         }
         val faceFinder = finder
-        if (bitmap == null || faceFinder == null) return
+        if (faceFinder == null) {
+            bitmap?.recycle()
+            return
+        }
+        if (bitmap == null) {
+            recordFailure() // the camera picture could not be converted
+            return
+        }
 
         faceFinder.find(bitmap, safeExecutor) { faces ->
             try {
-                if (faces != null) handleFaces(bitmap, faces)
+                if (faces == null) {
+                    recordFailure() // ML Kit could not process this picture
+                } else {
+                    handleFaces(bitmap, faces)
+                    recordSuccess()
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "Frame analysis failed", e)
+                recordFailure() // for example the embedding model threw an exception
             } finally {
                 bitmap.recycle() // the frame is discarded; it was never saved
             }
+        }
+    }
+
+    /** Called on the analysis thread. After 5 failures in a row the status changes to "degraded". */
+    private fun recordFailure() {
+        if (failures.failure()) {
+            degraded = true
+            eventLog.add(EventType.ANALYSIS_FAILING)
+            mainHandler.post { publishStatus() }
+        }
+    }
+
+    private fun recordSuccess() {
+        if (failures.success()) {
+            degraded = false
+            eventLog.add(EventType.ANALYSIS_RECOVERED)
+            mainHandler.post { publishStatus() }
         }
     }
 
@@ -437,14 +495,20 @@ class PrivacyGuardService : LifecycleService() {
         }
         val confirmed = filter.add(result.otherPersonLooking)
 
-        GuardState.debugLine = String.format(
-            Locale.US, "faces %d, facing %d, best match %s",
-            result.facesSeen, result.facingFaces,
-            result.bestMatch?.let { String.format(Locale.US, "%.2f", it) } ?: "-",
-        )
+        // What the main screen shows. Only shown while the status is Active (see publishStatus).
+        if (GuardState.status == GuardStatus.ACTIVE) {
+            GuardState.detection = result.state
+            GuardState.lastScore = result.bestMatch
+        }
 
         if (confirmed && cooldown.tryAlert(SystemClock.elapsedRealtime())) {
             Notifier.showAlert(this, settings.vibration)
+            // Log what the alert was about: a confident stranger, or (only if the user chose so) an uncertain face.
+            if (result.state == FrameState.UNCERTAIN) {
+                eventLog.add(EventType.UNCERTAIN_ALERT, result.lowestMatch)
+            } else {
+                eventLog.add(EventType.OTHER_PERSON_ALERT, result.lowestMatch)
+            }
         }
     }
 

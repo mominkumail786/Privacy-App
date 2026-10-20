@@ -2,21 +2,24 @@
 
 An Android app (Kotlin, Jetpack Compose) that watches the **front camera** while you use your phone and alerts you when **another person may be looking at your screen**. Everything runs on the phone. There is no INTERNET permission.
 
-> **Please read "What was and was not verified" first.** The app was written and its logic was tested, but it has **not been built into an APK or run on a phone yet**, because the machine it was written on cannot reach Google's servers.
+> **Status:** the app builds with `./gradlew assembleDebug` (AGP 9.4.0, Gradle 9.6.0, `compileSdk = 37`), was installed on a real Android 15 phone and the owner reported that it worked. See "What was and was not verified" for exactly what that does and does not cover.
+>
+> **Recognition update:** the recognition and alert logic was audited and improved (uncertain zone, calibration on your phone, enrollment verification, degraded-state detection, event log). Read `docs/RECOGNITION_REPORT.md` for the findings, the measured threshold numbers and an honest list of tests that were run and not run. **That update has not been built yet: build it and tell me about any compiler error.**
 
 ---
 
 ## 1. What was and was not verified
 
-The build environment used to write this app blocks `dl.google.com` (Google Maven and the Android SDK). So `./gradlew assembleDebug` **could not be run**. This is what I could and could not check:
+The code was written on a machine that could not reach Google's servers (`dl.google.com`), so it was first checked only partly. It was then built and run on the owner's own computer and phone. This is the honest picture:
 
 | Part | Status |
 |---|---|
-| Pure logic: cosine matching, head-pose rule, 3-of-5 filter, cooldown, enrollment steps, image-quality checks, AES-GCM encrypt/decrypt | **Compiled with Kotlin 2.4.21 and covered by 33 unit tests. All pass.** (`app/src/test/.../LogicTest.kt`) |
-| `AppSettings`, `ProfileStore` (Keystore AES-GCM), `FaceEmbedder` (TFLite) | **Compiled** against the real Android 15 framework stubs and the real TensorFlow Lite 2.16.1 classes. Not run. |
+| Pure logic: cosine matching, head-pose rule, 3-of-5 filter, cooldown, enrollment steps, image-quality checks, AES-GCM encrypt/decrypt | **62 unit tests, all pass** (`app/src/test/.../LogicTest.kt`, `RecognitionPolicyTest.kt`). |
+| The whole app (Gradle files, Compose screens, CameraX service, ML Kit, TFLite) | **Builds successfully** on the owner's computer. The only build error found was `compileSdk = 36`, which the current AndroidX libraries reject; it is now `37`. |
 | The face model | **Run** with a TFLite interpreter on sample photos (see section 4). |
-| Gradle files (AGP 9.4.0), Compose screens, CameraX service, ML Kit code, notifications | **Written carefully against the documented APIs but NOT compiled.** Expect that your first build in Android Studio may show a few small errors. Send them to me and I will fix them. |
-| Anything on a real phone (camera conflict, screen off, reboot, battery) | **Not tested.** Use the checklist in section 9. |
+| Running on a real phone | **Installed and tested by the owner on an Android 15 phone, who reported that everything worked.** The result of each single checklist item in section 9 was not written down, so treat section 9 as the list to re-check, especially camera conflict, phone restart, battery use over an hour and false alarms in your own daily use. |
+
+Not checked by anyone yet (as far as this repository knows): behaviour on other phone brands (some kill background apps aggressively), phones with 16 KB memory pages (see section 3), and long-term battery use.
 
 To run the logic tests yourself, no phone needed: `./gradlew testDebugUnitTest`.
 
@@ -25,11 +28,20 @@ To run the logic tests yourself, no phone needed: `./gradlew testDebugUnitTest`.
 ## 2. Build and run
 
 1. Install **Android Studio** (a recent version; AGP 9.4 needs JDK 17+, which Android Studio includes).
-2. Open this folder (`Privacy-App`) in Android Studio. Let Gradle sync. If it asks to install **Android SDK Platform 36** or Build Tools, accept.
+2. Open this folder (`Privacy-App`) in Android Studio. Let Gradle sync. If it asks to install **Android SDK Platform 37** or Build Tools, accept.
 3. **Download the face model** (next section). This step is required.
 4. Connect your phone (USB debugging on), press **Run**.
 
-Command line: `./gradlew assembleDebug` (APK in `app/build/outputs/apk/debug/`).
+Command line: `./gradlew assembleDebug`. The APK is `app/build/outputs/apk/debug/app-debug.apk`. The first build downloads libraries and the Android SDK Platform 37, so it takes several minutes.
+
+**Windows tip:** if `gradlew` says `JAVA_HOME is set to an invalid directory`, point it to the Java that comes with Android Studio, for this PowerShell window only:
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+.\gradlew assembleDebug
+```
+
+(Old Java 11 is too old for this project; it needs Java 17 or newer.)
 
 ### Download the face model
 
@@ -70,7 +82,7 @@ Notes you should know:
 
 * **AGP 9 has Kotlin built in.** That is why there is no `kotlin-android` plugin in the Gradle files. AGP 9 uses Kotlin 2.2.10 by default; the top-level `build.gradle.kts` requests Kotlin 2.4.21 in a `buildscript` block, exactly as the AGP 9 release notes describe. If you change the Kotlin version, change it in **both** `build.gradle.kts` and `gradle/libs.versions.toml` (the Compose compiler plugin must match). If Android Studio complains about a version mix, use its "Upgrade" suggestion.
 * **TensorFlow Lite / LiteRT.** `org.tensorflow:tensorflow-lite:2.17.0` is only a redirect to Google's new LiteRT library (`com.google.ai.edge.litert:litert:1.0.1`). I could not inspect LiteRT (Google Maven is blocked), so I used 2.16.1, the last release with a real file on Maven Central, and checked my code against its classes. Its native libraries are **4 KB page aligned**. This is fine on almost all Android 15 phones, but on a phone running with 16 KB memory pages the library may fail to load. If that ever happens, switch to LiteRT.
-* `compileSdk = 36` (needed by the newest AndroidX), `targetSdk = 35` (Android 15, as you asked), `minSdk = 26`.
+* `compileSdk = 37` (the newest AndroidX libraries require it; this was confirmed by a real build), `targetSdk = 35` (Android 15, as you asked), `minSdk = 26`.
 
 ---
 
@@ -105,7 +117,11 @@ CameraX frame (about 2-3 per second, the rest dropped)
 
 ### Status the screen shows (the real one)
 
-Active, Paused (camera busy), Paused (screen off), Paused (battery low), Stopped, Permission missing, Setup needed. Every 5 seconds a watchdog re-checks. If CameraX reports the camera as in use, **or no picture arrives for 10 seconds**, the status becomes "Protection paused: camera in use by another app" and the app unbinds and re-binds the camera every 5 seconds until pictures flow again.
+Active, Paused (camera busy), Paused (screen off), Paused (battery low), **Protection degraded** (face analysis keeps failing), Stopped, Permission missing, Setup needed.
+
+While Active, the main screen also shows what the last picture contained: **Owner detected**, **Other person detected**, **Owner and another person detected**, **Not sure who this is**, **Face seen but nobody looking at the screen**, or **No face in view**, with the best match number. Every face gets one of three verdicts: owner (match >= threshold), uncertain (in the uncertain zone below it, never claimed as owner or stranger, no alert by default) or stranger (below `match - uncertain zone`).
+
+**Settings > Calibrate on this phone** measures your own scores (about 10 seconds) and optionally another person's, and suggests the match threshold from those numbers. **Event log** shows alerts, camera busy and errors with times and match numbers (no pictures). Every 5 seconds a watchdog re-checks. If CameraX reports the camera as in use, **or no picture arrives for 10 seconds**, the status becomes "Protection paused: camera in use by another app" and the app unbinds and re-binds the camera every 5 seconds until pictures flow again.
 
 ### Face profile storage
 
@@ -125,14 +141,17 @@ app/src/main/res/                                 strings.xml, themes, launcher 
 app/src/main/java/com/example/privacyguard/
   MainActivity.kt                                 switches between screens, handles "Tap to restart"
   logic/   Thresholds.kt  FaceMath.kt  OtherPersonDetector.kt  TemporalFilter.kt  EnrollmentSession.kt
+           Verification.kt (enrollment check, threshold calibrator, failure monitor, event log format)
            (pure Kotlin, no Android, unit tested)
-  data/    AesGcmBox.kt  ProfileStore.kt  AppSettings.kt
+  data/    AesGcmBox.kt  ProfileStore.kt  AppSettings.kt  EventLogStore.kt
   face/    FaceEmbedder.kt (TFLite)   FaceFinder.kt (ML Kit + picture helpers)
   service/ PrivacyGuardService.kt  Notifier.kt  BootReceiver.kt  GuardState.kt
   ui/      Theme.kt  Components.kt  OnboardingScreen.kt  HomeScreen.kt  EnrollmentScreen.kt
-           SettingsScreen.kt  InfoScreens.kt (About + Battery help)
+           CalibrationScreen.kt  SettingsScreen.kt  InfoScreens.kt (About + Battery help + Event log)
   util/    Permissions.kt
-app/src/test/java/com/example/privacyguard/LogicTest.kt
+app/src/test/java/com/example/privacyguard/LogicTest.kt, RecognitionPolicyTest.kt
+docs/RECOGNITION_REPORT.md                        audit, measured thresholds, test status
+tools/threshold_experiment/                       scripts that produced the threshold numbers
 ```
 
 ---
@@ -181,6 +200,11 @@ Everything is in Settings, or in `Thresholds.forSensitivity` for the presets.
 - [ ] **False positives (most important):** use the phone for 30 minutes normally: bed, desk, walking, in dim light. Count the alerts you did not want. Try glasses, a hat, bad light. If there are too many, tune (section 8).
 - [ ] **Missed detections:** friend behind you, friend beside you (not detectable: see below), friend across a table.
 - [ ] **Battery use after 1 hour:** note the battery % before; run protection for 1 hour with normal use; then check Settings > Battery > AI Privacy Guard. Tell me the number. Expect noticeable use, because the camera and ML run continuously.
+- [ ] **Calibration:** Settings > Calibrate on this phone. Measure yourself, then a friend. Write down the result (good / overlap) and apply it. If it says "overlap", improve the light or create the profile again, and do not trust the alerts.
+- [ ] **Owner never flagged:** with the default and with the calibrated numbers, use the phone normally for 30 minutes. The Event log must show no "ALERT: other person" caused by you. Check the "Best match" number on the main screen: it should stay clearly above the owner threshold.
+- [ ] **Other person flagged:** a friend looks at the screen from the side (head turned less than the head angle limit) for several seconds: "Other person detected" and an alert. Repeat with you and the friend in the picture together.
+- [ ] **No internet:** run the `aapt2 dump permissions` command from `docs/RECOGNITION_REPORT.md` section 6. `INTERNET` must not appear.
+- [ ] **Photo test (expected to FAIL):** show a photo of yourself on another phone to the camera. The app has no liveness check and may treat it as you. Note what happens.
 - [ ] **Delete profile:** Settings > Delete. Try Start Protection: it must refuse until you create a new profile.
 - [ ] **Privacy:** Settings > Apps > AI Privacy Guard shows no internet/network permission. Open the phone's file manager or `adb shell run-as com.example.privacyguard ls files`: only `face_profile.enc` exists, no images.
 
@@ -200,7 +224,7 @@ Everything is in Settings, or in `Thresholds.forSensitivity` for the presets.
 
 ## 11. Things I am not sure about
 
-* **First build.** The Gradle/AGP 9.4/Compose/CameraX/ML Kit parts were never compiled (see section 1).
+* **Test coverage.** The app builds and was reported working on one phone, but only the pure logic has automatic tests. Camera, service and alert behaviour have been checked by hand only, on one phone (see section 1).
 * **Sign of head angles.** I could not check whether ML Kit's yaw/pitch signs are mirrored for the front camera, so enrollment accepts either direction for "left" and requires the opposite for "right" (same for up/down). Both sides are captured either way, but the words "left" and "right" on screen may be swapped.
 * **Accurate mode.** I use ML Kit's ACCURATE mode because I was not sure the up/down angle is reliable in FAST mode. If battery use is too high, you can try FAST in `FaceFinder.kt` and check that "facing" still behaves.
 * **Frame rate.** The camera still produces about 30 frames per second; the app throws away all but 2-3 per second right away. That saves most of the CPU work, not the camera sensor's own power. A lower hardware frame rate can be set via Camera2 interop, but phones differ, so I did not add it.

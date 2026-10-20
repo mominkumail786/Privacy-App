@@ -23,7 +23,8 @@ class FaceEmbedder(context: Context) : Closeable {
 
     private val interpreter: Interpreter
     private val batchSize: Int
-    private val embeddingSize: Int
+    /** Length of the vectors this model produces (192 for MobileFaceNet). */
+    val embeddingSize: Int
     private val input: ByteBuffer
     private val pixels = IntArray(INPUT_SIZE * INPUT_SIZE)
 

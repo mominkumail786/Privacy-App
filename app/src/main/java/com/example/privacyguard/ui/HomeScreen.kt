@@ -24,12 +24,13 @@ import androidx.compose.ui.unit.dp
 import com.example.privacyguard.R
 import com.example.privacyguard.data.ProfileStore
 import com.example.privacyguard.face.FaceEmbedder
+import com.example.privacyguard.logic.FrameState
 import com.example.privacyguard.service.GuardState
 import com.example.privacyguard.service.GuardStatus
 import com.example.privacyguard.service.PrivacyGuardService
 import com.example.privacyguard.util.Permissions
 
-enum class Screen { ONBOARDING, HOME, ENROLL, SETTINGS, ABOUT, BATTERY }
+enum class Screen { ONBOARDING, HOME, ENROLL, SETTINGS, ABOUT, BATTERY, CALIBRATE, EVENTS }
 
 @Composable
 fun HomeScreen(
@@ -50,10 +51,7 @@ fun HomeScreen(
     }
 
     val serviceStatus = GuardState.status
-    val running = serviceStatus == GuardStatus.ACTIVE ||
-        serviceStatus == GuardStatus.PAUSED_CAMERA_BUSY ||
-        serviceStatus == GuardStatus.PAUSED_SCREEN_OFF ||
-        serviceStatus == GuardStatus.PAUSED_LOW_BATTERY
+    val running = serviceStatus.isRunning
     // The camera permission can be taken away in system settings: then the truth is "Permission missing".
     val shownStatus = if (!cameraOk && !running) GuardStatus.PERMISSION_MISSING else serviceStatus
 
@@ -68,7 +66,7 @@ fun HomeScreen(
     }
 
     ScreenScaffold(title = stringResource(R.string.app_name)) {
-        StatusCard(shownStatus, GuardState.debugLine)
+        StatusCard(shownStatus, GuardState.detection, GuardState.lastScore)
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = { PrivacyGuardService.start(activity) }, enabled = canStart) {
@@ -128,19 +126,20 @@ fun HomeScreen(
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = { navigate(Screen.SETTINGS) }) { Text(stringResource(R.string.btn_settings)) }
-            OutlinedButton(onClick = { navigate(Screen.ABOUT) }) { Text(stringResource(R.string.btn_about)) }
+            OutlinedButton(onClick = { navigate(Screen.EVENTS) }) { Text(stringResource(R.string.btn_event_log)) }
         }
+        OutlinedButton(onClick = { navigate(Screen.ABOUT) }) { Text(stringResource(R.string.btn_about)) }
     }
 }
 
 @Composable
-private fun StatusCard(status: GuardStatus, debugLine: String) {
+private fun StatusCard(status: GuardStatus, detection: FrameState?, score: Float?) {
     val colors = MaterialTheme.colorScheme
     val background = when (status) {
         GuardStatus.ACTIVE -> colors.primaryContainer
         GuardStatus.PAUSED_CAMERA_BUSY, GuardStatus.PAUSED_SCREEN_OFF, GuardStatus.PAUSED_LOW_BATTERY -> colors.tertiaryContainer
         GuardStatus.STOPPED -> colors.surfaceVariant
-        GuardStatus.PERMISSION_MISSING, GuardStatus.SETUP_NEEDED -> colors.errorContainer
+        GuardStatus.PERMISSION_MISSING, GuardStatus.SETUP_NEEDED, GuardStatus.DEGRADED -> colors.errorContainer
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -149,8 +148,21 @@ private fun StatusCard(status: GuardStatus, debugLine: String) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(stringResource(R.string.status_label), style = MaterialTheme.typography.labelLarge)
             Text(stringResource(status.textRes), style = MaterialTheme.typography.titleLarge)
-            if (status == GuardStatus.ACTIVE && debugLine.isNotEmpty()) {
-                Text(stringResource(R.string.debug_title) + ": " + debugLine, style = MaterialTheme.typography.bodySmall)
+            if (status == GuardStatus.ACTIVE) {
+                // The live result of the last checked picture. Numbers only, never pictures.
+                val detectionRes = when (detection) {
+                    FrameState.NO_FACE -> R.string.detect_no_face
+                    FrameState.NOT_FACING -> R.string.detect_not_facing
+                    FrameState.OWNER -> R.string.detect_owner
+                    FrameState.OWNER_AND_OTHER -> R.string.detect_owner_other
+                    FrameState.OTHER_PERSON -> R.string.detect_other
+                    FrameState.UNCERTAIN -> R.string.detect_uncertain
+                    null -> R.string.detect_waiting
+                }
+                Text(stringResource(R.string.detect_title) + ": " + stringResource(detectionRes), style = MaterialTheme.typography.titleMedium)
+                if (score != null) {
+                    Text(stringResource(R.string.detect_score, "%.2f".format(score)), style = MaterialTheme.typography.bodySmall)
+                }
             }
             Text(stringResource(R.string.status_note), style = MaterialTheme.typography.bodySmall)
         }

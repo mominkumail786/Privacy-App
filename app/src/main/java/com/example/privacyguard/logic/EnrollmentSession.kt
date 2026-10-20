@@ -21,6 +21,13 @@ class EnrollmentSession {
     private var turnSign = 0 // sign of yaw seen at the LEFT step
     private var tiltSign = 0 // sign of pitch seen at the UP step
 
+    /** Starts again from the first step (used when the 5 pictures turned out to be inconsistent). */
+    fun reset() {
+        index = 0
+        turnSign = 0
+        tiltSign = 0
+    }
+
     val isFinished get() = index >= steps.size
     val currentStep get() = steps[index]
 

@@ -37,7 +37,7 @@ import com.example.privacyguard.service.PrivacyGuardService
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsScreen(context: Context, onOpenBatteryHelp: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(context: Context, onOpenBatteryHelp: () -> Unit, onCalibrate: () -> Unit, onBack: () -> Unit) {
     val settings = remember { AppSettings(context) }
     var sensitivity by remember { mutableStateOf(settings.sensitivity) }
     var thresholds by remember { mutableStateOf(settings.thresholds) }
@@ -84,6 +84,33 @@ fun SettingsScreen(context: Context, onOpenBatteryHelp: () -> Unit, onBack: () -
             onValueChangeFinished = { settings.thresholds = thresholds },
             valueRange = 0.2f..0.8f,
         )
+
+        Text(stringResource(R.string.adv_uncertain, "%.2f".format(thresholds.uncertainMargin), "%.2f".format(thresholds.strangerBelow)))
+        Slider(
+            value = thresholds.uncertainMargin,
+            onValueChange = { thresholds = thresholds.copy(uncertainMargin = (it * 100).roundToInt() / 100f) },
+            onValueChangeFinished = { settings.thresholds = thresholds },
+            valueRange = 0f..0.25f,
+        )
+
+        // Policy for faces that are neither clearly the owner nor clearly a stranger.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = thresholds.alertOnUncertain,
+                    role = Role.Switch,
+                    onValueChange = {
+                        thresholds = thresholds.copy(alertOnUncertain = it)
+                        settings.thresholds = thresholds
+                    },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(stringResource(R.string.settings_alert_uncertain), modifier = Modifier.weight(1f))
+            Switch(checked = thresholds.alertOnUncertain, onCheckedChange = null)
+        }
 
         Text(stringResource(R.string.adv_angle, thresholds.maxHeadAngle.roundToInt()))
         Slider(
@@ -136,6 +163,7 @@ fun SettingsScreen(context: Context, onOpenBatteryHelp: () -> Unit, onBack: () -
         HorizontalDivider()
 
         // ----- Battery help and delete -----
+        OutlinedButton(onClick = onCalibrate) { Text(stringResource(R.string.settings_calibrate)) }
         OutlinedButton(onClick = onOpenBatteryHelp) { Text(stringResource(R.string.settings_battery)) }
         Button(onClick = { confirmDelete = true }) { Text(stringResource(R.string.settings_delete_profile)) }
     }

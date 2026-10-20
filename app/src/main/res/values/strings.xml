@@ -41,7 +41,6 @@
     <string name="btn_start">Start Protection</string>
     <string name="btn_stop">Stop</string>
     <string name="start_blocked">To start: allow the camera and notifications, and create your face profile.</string>
-    <string name="debug_title">Last checked picture (numbers only)</string>
     <string name="setup_title">Setup</string>
     <string name="setup_profile_missing">Face profile: not created yet</string>
     <string name="setup_profile_ok">Face profile: saved on this phone (encrypted)</string>
@@ -129,4 +128,62 @@
     <string name="channel_status">Protection status</string>
     <string name="channel_alert">Privacy alerts</string>
     <string name="channel_restart">Restart reminder</string>
+
+    <!-- Added: live detection state, degraded protection, event log, calibration -->
+    <string name="status_degraded">Protection degraded: face analysis keeps failing</string>
+    <string name="detect_title">Right now</string>
+    <string name="detect_waiting">Waiting for the first picture...</string>
+    <string name="detect_no_face">No face in view</string>
+    <string name="detect_not_facing">Face seen, but nobody is looking at the screen</string>
+    <string name="detect_owner">Owner detected</string>
+    <string name="detect_owner_other">Owner and another person detected</string>
+    <string name="detect_other">Other person detected</string>
+    <string name="detect_uncertain">Not sure who this is</string>
+    <string name="detect_score">Best match to your face profile: %1$s</string>
+    <string name="btn_event_log">Event log</string>
+    <string name="events_title">Event log</string>
+    <string name="events_empty">No events yet.</string>
+    <string name="btn_clear_log">Clear log</string>
+    <string name="event_started">Protection started</string>
+    <string name="event_stopped">Protection stopped</string>
+    <string name="event_other_alert">ALERT: other person (lowest match)</string>
+    <string name="event_uncertain_alert">ALERT: uncertain face (lowest match)</string>
+    <string name="event_camera_busy">Camera in use by another app</string>
+    <string name="event_camera_resumed">Camera back, protection active</string>
+    <string name="event_analysis_failing">Face analysis is failing</string>
+    <string name="event_analysis_recovered">Face analysis works again</string>
+    <string name="event_profile_invalid">Face profile does not fit the model: please create it again</string>
+
+    <string name="adv_uncertain">Uncertain zone: %1$s wide. Below %2$s counts as a stranger.</string>
+    <string name="settings_alert_uncertain">Also alert for faces I am not sure about</string>
+    <string name="settings_calibrate">Calibrate on this phone</string>
+
+    <string name="enroll_center">Move your face into the oval.</string>
+    <string name="enroll_inconsistent">The 5 pictures did not look like the same person, so nothing was saved. Please start again in good light, with only your face in view.</string>
+
+    <string name="calib_title">Calibrate</string>
+    <string name="calib_intro">This measures how well the app recognises YOU on this phone, and (optional) how another person scores. Then it suggests the numbers. Step 1: look at the screen for about 10 seconds. Only you may be in view.</string>
+    <string name="calib_need_profile">Create your face profile first.</string>
+    <string name="calib_btn_owner">Start: measure me</string>
+    <string name="calib_recording_owner">Measuring you. Look at the screen, move your head a little.</string>
+    <string name="calib_recording_other">Measuring the other person. Only they may be in view.</string>
+    <string name="calib_look">Keep your face in view.</string>
+    <string name="calib_one_person">Exactly one person must be in view and looking at the screen.</string>
+    <string name="calib_samples">Pictures measured: %1$d of %2$d</string>
+    <string name="calib_live">Match to your profile: %1$s</string>
+    <string name="calib_other_prompt">Step 2 (recommended): hand the phone to someone else. They look at the screen for about 10 seconds. Without this step the app has to guess where strangers score.</string>
+    <string name="calib_btn_other">Measure another person</string>
+    <string name="calib_btn_skip">Skip</string>
+    <string name="calib_result_title">Result</string>
+    <string name="calib_quality_good">Good: you and the other person are clearly apart on this phone.</string>
+    <string name="calib_quality_overlap">Warning: you and the other person score too close together. The app cannot tell you apart reliably here. Try better light, create the profile again, and keep the wide uncertain zone.</string>
+    <string name="calib_quality_owner_only">Only you were measured. The stranger side is an assumption, so the numbers are less safe. Measure another person for a better result.</string>
+    <string name="calib_quality_no_data">Not enough pictures were measured.</string>
+    <string name="calib_numbers">Your low end (5%% of pictures): %1$s\nOther person high end (95%% of pictures): %2$s\nSuggested: owner if match is %3$s or more, stranger if below %4$s.</string>
+    <string name="calib_btn_apply">Use these numbers</string>
+    <string name="calib_applied">Applied</string>
+    <string name="calib_btn_again">Measure again</string>
+
+    <string name="about_p8">No photo or video check (liveness). A photo or a video of the owner shown to the camera may be accepted as the owner. The app does not detect this.</string>
+    <string name="about_p9">Recognition is not perfect. The match score depends on light and camera quality. When the app is not sure it says so and, by default, does not alert. You can calibrate on this phone in Settings.</string>
 </resources>

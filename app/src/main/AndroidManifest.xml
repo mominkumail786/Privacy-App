@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Camera: needed to see faces. Asked at runtime, with a reason shown first. -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -18,7 +19,10 @@
     <!-- Lets the app ask you (one tap dialog) to turn off battery optimization. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- NOTE: there is no INTERNET permission. The app cannot send anything online. -->
+    <!-- There is no INTERNET permission, and it is actively REMOVED below in case a library
+         (for example ML Kit) tries to add it. Without it, Android blocks all network access for this app,
+         so face data cannot leave the phone even by mistake. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
 
     <uses-feature
         android:name="android.hardware.camera.front"

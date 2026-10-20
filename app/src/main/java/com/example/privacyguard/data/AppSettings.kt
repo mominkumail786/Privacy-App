@@ -10,6 +10,15 @@ class AppSettings(context: Context) {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
+    init {
+        // Version 2 introduced the "uncertain zone" and new, measured threshold presets.
+        // Older installs still hold the old numbers (match 0.45 was too strict), so apply the current preset once.
+        if (prefs.getInt("settingsVersion", 1) < SETTINGS_VERSION) {
+            applySensitivity(sensitivity)
+            prefs.edit().putInt("settingsVersion", SETTINGS_VERSION).apply()
+        }
+    }
+
     var onboardingDone: Boolean
         get() = prefs.getBoolean("onboardingDone", false)
         set(value) = prefs.edit().putBoolean("onboardingDone", value).apply()
@@ -38,6 +47,8 @@ class AppSettings(context: Context) {
             val d = Thresholds.forSensitivity(Sensitivity.MEDIUM)
             return Thresholds(
                 matchThreshold = prefs.getFloat("matchThreshold", d.matchThreshold),
+                uncertainMargin = prefs.getFloat("uncertainMargin", d.uncertainMargin),
+                alertOnUncertain = prefs.getBoolean("alertOnUncertain", d.alertOnUncertain),
                 maxHeadAngle = prefs.getFloat("maxHeadAngle", d.maxHeadAngle),
                 minFaceSize = prefs.getFloat("minFaceSize", d.minFaceSize),
                 windowSize = prefs.getInt("windowSize", d.windowSize),
@@ -47,6 +58,8 @@ class AppSettings(context: Context) {
         set(t) {
             prefs.edit()
                 .putFloat("matchThreshold", t.matchThreshold)
+                .putFloat("uncertainMargin", t.uncertainMargin)
+                .putBoolean("alertOnUncertain", t.alertOnUncertain)
                 .putFloat("maxHeadAngle", t.maxHeadAngle)
                 .putFloat("minFaceSize", t.minFaceSize)
                 .putInt("windowSize", t.windowSize)
@@ -54,8 +67,14 @@ class AppSettings(context: Context) {
                 .apply()
         }
 
+    /** Picks a preset. Keeps the user's "alert on uncertain faces" choice. */
     fun applySensitivity(level: Sensitivity) {
+        val keepPolicy = prefs.getBoolean("alertOnUncertain", false)
         sensitivity = level
-        thresholds = Thresholds.forSensitivity(level)
+        thresholds = Thresholds.forSensitivity(level).copy(alertOnUncertain = keepPolicy)
+    }
+
+    companion object {
+        private const val SETTINGS_VERSION = 2
     }
 }

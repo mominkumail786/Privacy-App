@@ -13,6 +13,8 @@ import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size as ComposeSize
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -38,6 +44,7 @@ import com.example.privacyguard.face.FaceEmbedder
 import com.example.privacyguard.face.FaceFinder
 import com.example.privacyguard.face.FaceImages
 import com.example.privacyguard.logic.EnrollStep
+import com.example.privacyguard.logic.EnrollmentCheck
 import com.example.privacyguard.logic.EnrollmentSession
 import com.example.privacyguard.logic.FaceMath
 import com.example.privacyguard.logic.ImageQuality
@@ -73,6 +80,7 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
     var stepNumber by remember { mutableIntStateOf(0) }       // 0..4 = steps, 5 = saving
     var feedbackRes by remember { mutableIntStateOf(R.string.enroll_front) }
     var failed by remember { mutableStateOf(false) }
+    var inconsistent by remember { mutableStateOf(false) }
     val previewView = remember { PreviewView(activity) }
 
     DisposableEffect(Unit) {
@@ -102,7 +110,30 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
 
         fun saveProfile() {
             try {
-                ProfileStore(activity).save(FaceMath.averageProfile(embeddings))
+                // 1. Do the 5 pictures belong together? If not, start again instead of saving a bad profile.
+                val check = EnrollmentCheck.verify(embeddings)
+                val profile = check.profile
+                if (!check.ok || profile == null) {
+                    Log.w("Enrollment", "Samples inconsistent, lowest similarity ${check.lowestSimilarity}")
+                    embeddings.clear()
+                    session.reset()
+                    finishedCapturing = false
+                    mainHandler.post {
+                        stepNumber = 0
+                        inconsistent = true
+                        feedbackRes = R.string.enroll_front
+                    }
+                    return
+                }
+                // 2. Save it encrypted, then read it back: protection is only enabled for a profile that really loads.
+                val store = ProfileStore(activity)
+                store.save(profile)
+                val back = store.load()
+                if (back == null || back.size != profile.size || FaceMath.cosineSimilarity(back, profile) < 0.999f) {
+                    store.delete()
+                    mainHandler.post { failed = true; stepNumber = 0 }
+                    return
+                }
                 embeddings.clear() // the numbers are saved (encrypted); forget them here
                 mainHandler.post { onFinished() }
             } catch (e: Exception) {
@@ -148,6 +179,10 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
                                     when {
                                         face.sizeRatio < MIN_FACE_RATIO -> { goodFrames = 0; show(R.string.enroll_too_far) }
                                         face.sizeRatio > MAX_FACE_RATIO -> { goodFrames = 0; show(R.string.enroll_too_close) }
+                                        !isCentered(face.box.centerX() / bitmap.width.toFloat(), face.box.centerY() / bitmap.height.toFloat()) -> {
+                                            goodFrames = 0
+                                            show(R.string.enroll_center)
+                                        }
                                         abs(face.roll) > MAX_ROLL -> { goodFrames = 0; show(R.string.enroll_roll) }
                                         !session.poseMatches(face.yaw, face.pitch) -> {
                                             goodFrames = 0
@@ -224,13 +259,25 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
     ScreenScaffold(title = stringResource(R.string.enroll_title), onBack = onCancel) {
         Text(stringResource(R.string.enroll_intro), style = MaterialTheme.typography.bodyMedium)
 
-        AndroidView(
-            factory = { previewView },
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(3f / 4f)
                 .clip(RoundedCornerShape(16.dp)),
-        )
+        ) {
+            AndroidView(factory = { previewView }, modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f))
+            // The oval: put your face inside it.
+            Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f)) {
+                val w = size.width * 0.62f
+                val h = size.height * 0.62f
+                drawOval(
+                    color = Color.White,
+                    topLeft = Offset((size.width - w) / 2f, (size.height - h) / 2f),
+                    size = ComposeSize(w, h),
+                    style = Stroke(width = 6.dp.toPx()),
+                )
+            }
+        }
 
         val steps = EnrollStep.entries
         val shownStep = stepNumber.coerceAtMost(steps.size - 1)
@@ -247,11 +294,17 @@ private fun EnrollmentCamera(activity: ComponentActivity, onFinished: () -> Unit
             Text(stringResource(feedbackRes), style = MaterialTheme.typography.bodyLarge)
             Text(stringResource(R.string.enroll_hint_sides), style = MaterialTheme.typography.bodySmall)
         }
+        if (inconsistent) {
+            Text(stringResource(R.string.enroll_inconsistent), color = MaterialTheme.colorScheme.error)
+        }
         if (failed) {
             Text(stringResource(R.string.enroll_error), color = MaterialTheme.colorScheme.error)
         }
     }
 }
+
+/** The face centre must be near the middle of the picture (where the oval is). Values are 0..1 of width / height. */
+private fun isCentered(x: Float, y: Float): Boolean = abs(x - 0.5f) < 0.2f && abs(y - 0.5f) < 0.25f
 
 private const val MIN_FACE_RATIO = 0.25f      // face must fill at least 25% of the picture width
 private const val MAX_FACE_RATIO = 0.85f
