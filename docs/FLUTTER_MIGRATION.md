@@ -48,7 +48,7 @@ How enrollment works across the bridge: Kotlin sends the measurement of each pic
 
 ## Verification status
 
-Dart: `flutter analyze` clean, 128 tests pass. Kotlin pure logic: 53 tests pass. Kotlin bridge: compiled only against hand-written stand-ins. **Not done: a real Gradle build, running on a phone.** See README section 1.
+Dart: `flutter analyze` clean, 128 tests pass. Kotlin pure logic: 53 tests pass. On GitHub Actions (commit `fcf10c2`) analyze, the Dart tests, the Kotlin tests and `flutter build apk --debug` all succeeded, so the Kotlin bridge compiles against the real Flutter and CameraX libraries. **Not done: running on a phone.** See README section 1.
 
 ## Last native version
 

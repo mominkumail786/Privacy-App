@@ -4,7 +4,7 @@ An Android app that watches the **front camera** while you use your phone and al
 
 The app is now a **Flutter / Dart** project. The screens and all the decision logic (settings, enrollment steps, calibration, event log, About & Developer credit) are Dart. The background camera service, camera, face detection, face model and encrypted storage stay in Kotlin, because Flutter cannot run a camera in the background on Android 14/15. Read `docs/FLUTTER_MIGRATION.md` for what lives where and why.
 
-> **Status, honestly:** the Dart side compiles and passes **128 automatic tests** and `flutter analyze` is clean. The Kotlin logic still passes its **53 tests**. The new Kotlin bridge (`android/.../bridge/`) was only checked against hand-written stand-ins for the Flutter and CameraX libraries. **The complete Flutter Android app has not been built or run by me** (the machine I work on cannot reach Google's servers). It has to be built on your computer, and the first build may show compiler errors that only a real build can find. Please send me the first error text if that happens. The last version that was built and tested on a phone is the native Kotlin/Compose app at commit `1370dc4`.
+> **Status, honestly:** on GitHub's build machine (GitHub Actions, run 2 of `.github/workflows/flutter.yml`, commit `fcf10c2`) `flutter analyze`, the **128 Dart tests**, the **Kotlin unit tests** and **`flutter build apk --debug`** all succeeded, so the project **compiles into an APK** including the new Kotlin bridge. **Nothing has been run on a phone yet**: the camera preview inside Flutter and enrollment on a real face are untested. The last version that was tested on a phone is the native Kotlin/Compose app at commit `1370dc4`.
 
 ---
 
@@ -15,8 +15,8 @@ The app is now a **Flutter / Dart** project. The screens and all the decision lo
 | Dart logic (thresholds, matching, enrollment state machine, calibrator, controllers, all screens) | **128 tests pass** (`flutter test`), including 25 simulated-user enrollment tests, the exact developer credit text and small-screen layout. `flutter analyze`: no issues. |
 | Dart presets equal the Kotlin presets | A test reads `Thresholds.kt` and compares the numbers. |
 | Kotlin logic (matching, filter, cooldown, image quality, AES-GCM, safe file save) | **53 unit tests pass** in a plain JVM project (`android/app/src/test/kotlin/...`). |
-| Kotlin bridge (`PrivacyGuardPlugin`, `FaceSession`, `CameraPreviewFactory`, `MainActivity`) | Compiled only against **my own stand-ins** for Flutter and CameraX. That finds typos and wrong names, but **cannot prove that the real libraries accept the code**. |
-| `flutter build apk`, Gradle, AGP 9, plugins (`permission_handler`) | **Not run.** |
+| Kotlin bridge (`PrivacyGuardPlugin`, `FaceSession`, `CameraPreviewFactory`, `MainActivity`) | **Compiles** against the real Flutter and CameraX libraries (it is part of the APK built on GitHub Actions). Behaviour is untested. |
+| `flutter build apk --debug`, Gradle, AGP 9, `permission_handler` | **Succeeded on GitHub Actions** (Ubuntu, JDK 21, Flutter stable of 21 Oct 2026). Not yet on your Windows PC. The Kotlin unit tests also ran there and passed. |
 | Camera preview inside Flutter (`AndroidView` + CameraX `PreviewView`), camera session, enrollment on a real face | **Not run on any phone.** |
 | Foreground service, notifications, boot "Tap to restart", battery, ML Kit angles | Unchanged Kotlin code. It was installed and tested by the owner as the native app (commit `1370dc4`). Not re-tested after the move. |
 | Face model | Run with a TFLite interpreter on sample photos (section 4). |
@@ -191,7 +191,7 @@ scripts/download_model.sh, download_model.ps1
 
 ## 9. Final test checklist
 
-- [ ] **Build:** `flutter build apk --debug` succeeds. (If not: send the first error.)
+- [x] **Build:** `flutter build apk --debug` succeeded on GitHub Actions. Repeat on your PC.
 - [ ] **Camera preview in Flutter:** enrollment shows the live front camera in the box.
 - [ ] **Enrollment:** completes; note seconds, pictures/s and ms. Restart the app: "Face profile: saved".
 - [ ] **Camera conflict:** protection Active, start a video call: "Protection paused: camera in use by another app" within 5-10 s, back to "Active" afterwards.
@@ -221,7 +221,7 @@ scripts/download_model.sh, download_model.ps1
 
 ## 11. Things I am not sure about
 
-* **The whole Flutter Android build** (Gradle, AGP 9, plugin compatibility) and **the camera inside a Flutter platform view** (`PreviewView` in COMPATIBLE/TextureView mode) are untested. These are the two most likely places for a first error.
+* **The camera inside a Flutter platform view** (`PreviewView` in COMPATIBLE/TextureView mode) is untested on a phone. It compiles, but a black preview box is the most likely first problem. The build on your own PC may also differ from GitHub's (Flutter or Android SDK version).
 * **Sign of head angles.** I could not check whether ML Kit's yaw/pitch signs are mirrored for the front camera, so enrollment accepts either direction for "left" and requires the opposite for "right" (same for up/down). The words "left"/"right" on screen may be swapped.
 * **Enrollment thresholds** (12 degrees turn, 8 degrees nod) come from reasoning and simulation, not from measurements on a phone.
 * **Accurate mode** of ML Kit is used for reliable angles; FAST mode may save battery.
