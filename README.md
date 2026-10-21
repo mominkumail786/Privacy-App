@@ -4,7 +4,7 @@ An Android app that watches the **front camera** while you use your phone and al
 
 The app is now a **Flutter / Dart** project. The screens and all the decision logic (settings, enrollment steps, calibration, event log, About & Developer credit) are Dart. The background camera service, camera, face detection, face model and encrypted storage stay in Kotlin, because Flutter cannot run a camera in the background on Android 14/15. Read `docs/FLUTTER_MIGRATION.md` for what lives where and why.
 
-> **Status, honestly:** on GitHub's build machine (GitHub Actions, run 2 of `.github/workflows/flutter.yml`, commit `fcf10c2`) `flutter analyze`, the **128 Dart tests**, the **Kotlin unit tests** and **`flutter build apk --debug`** all succeeded, so the project **compiles into an APK** including the new Kotlin bridge. **Nothing has been run on a phone yet**: the camera preview inside Flutter and enrollment on a real face are untested. The last version that was tested on a phone is the native Kotlin/Compose app at commit `1370dc4`.
+> **Status, honestly:** on GitHub's build machine (GitHub Actions, `.github/workflows/flutter.yml`, commit `51348b1`) `flutter analyze`, the **128 Dart tests**, the **Kotlin unit tests** and **`flutter build apk --debug`** all succeeded **with both the newest stable Flutter and Flutter 3.32.5**, so the project **compiles into an APK** including the new Kotlin bridge. **Nothing has been run on a phone yet**: the camera preview inside Flutter and enrollment on a real face are untested. The last version that was tested on a phone is the native Kotlin/Compose app at commit `1370dc4`.
 
 ---
 
@@ -16,7 +16,7 @@ The app is now a **Flutter / Dart** project. The screens and all the decision lo
 | Dart presets equal the Kotlin presets | A test reads `Thresholds.kt` and compares the numbers. |
 | Kotlin logic (matching, filter, cooldown, image quality, AES-GCM, safe file save) | **53 unit tests pass** in a plain JVM project (`android/app/src/test/kotlin/...`). |
 | Kotlin bridge (`PrivacyGuardPlugin`, `FaceSession`, `CameraPreviewFactory`, `MainActivity`) | **Compiles** against the real Flutter and CameraX libraries (it is part of the APK built on GitHub Actions). Behaviour is untested. |
-| `flutter build apk --debug`, Gradle, AGP 9, `permission_handler` | **Succeeded on GitHub Actions** (Ubuntu, JDK 21, Flutter stable of 21 Oct 2026). Not yet on your Windows PC. The Kotlin unit tests also ran there and passed. |
+| `flutter build apk --debug`, Gradle, AGP 9, `permission_handler` | **Succeeded on GitHub Actions** (Ubuntu, JDK 21) with Flutter stable (21 Oct 2026) and with Flutter 3.32.5. Not yet on your Windows PC. The Kotlin unit tests also ran there and passed. |
 | Camera preview inside Flutter (`AndroidView` + CameraX `PreviewView`), camera session, enrollment on a real face | **Not run on any phone.** |
 | Foreground service, notifications, boot "Tap to restart", battery, ML Kit angles | Unchanged Kotlin code. It was installed and tested by the owner as the native app (commit `1370dc4`). Not re-tested after the move. |
 | Face model | Run with a TFLite interpreter on sample photos (section 4). |
@@ -29,7 +29,7 @@ Not checked by anyone yet: other phone brands, phones with 16 KB memory pages (s
 
 You need:
 
-* **Flutter SDK 3.27 or newer** (`flutter --version`). Dart 3.6 comes with it.
+* **Flutter SDK 3.27 or newer** (`flutter --version`). Built successfully with Flutter 3.32.5 and with the newest stable. Dart 3.6 comes with it.
 * **Android Studio** with **Android SDK Platform 37** and Build Tools. (Open the project once in Android Studio, or use SDK Manager.)
 * Java 17 or newer. The one in Android Studio is fine.
 
@@ -74,16 +74,16 @@ Easiest: `bash scripts/download_model.sh` (Mac/Linux/Git Bash) or `powershell -E
 
 | Part | Version |
 |---|---|
-| Flutter template | AGP 9.1.0, Gradle 9.3.1, Kotlin 2.4.0 (set by the Flutter template in `android/settings.gradle.kts`) |
-| Dart packages | `permission_handler ^13.0.0` (only to ask for camera/notification permission) |
-| CameraX | 1.6.2 |
+| Android build tools | **Gradle 8.14.3, AGP 8.11.1, Kotlin 2.2.20** (`android/settings.gradle.kts`, `android/gradle/wrapper/gradle-wrapper.properties`). Chosen so that old (3.32) and new Flutter both work, see `docs/FLUTTER_MIGRATION.md`, "Toolchain". |
+| Dart packages | `permission_handler ^12.0.1` (only to ask for camera/notification permission) |
+| CameraX | 1.4.2 |
 | ML Kit face detection | 16.1.7 |
 | TensorFlow Lite | 2.16.1 |
-| AndroidX core / lifecycle service | 1.19.1 / 2.11.0 |
-| `compileSdk` / `targetSdk` / `minSdk` | 37 / 35 (Android 15) / 26 |
+| AndroidX core / lifecycle service | 1.16.0 / 2.9.2 |
+| `compileSdk` / `targetSdk` / `minSdk` | 36 / 35 (Android 15) / 26 |
 
 * **TensorFlow Lite / LiteRT.** `org.tensorflow:tensorflow-lite:2.17.0` is only a redirect to Google's new LiteRT library. I used 2.16.1, the last release with a real file on Maven Central. Its native libraries are **4 KB page aligned**: fine on almost all Android 15 phones, but on a phone running with 16 KB memory pages the library may fail to load. Then switch to LiteRT.
-* `compileSdk = 37` is needed by the newest AndroidX libraries (confirmed by a real build of the native app).
+* **Older libraries on purpose.** The newest AndroidX libraries (core 1.19, CameraX 1.6) need AGP 9.1, and `permission_handler` 13+ needs AGP 9 too, but Flutter 3.32's own Gradle plugin does not compile under Gradle 9. So the project uses CameraX 1.4.2 / core 1.16 / `permission_handler` 12 (found by CI). The native Kotlin/Compose app tested on a phone (commit `1370dc4`) used CameraX 1.6.2, so camera behaviour with 1.4.2 is not yet checked on a phone.
 
 ---
 

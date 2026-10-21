@@ -48,7 +48,19 @@ How enrollment works across the bridge: Kotlin sends the measurement of each pic
 
 ## Verification status
 
-Dart: `flutter analyze` clean, 128 tests pass. Kotlin pure logic: 53 tests pass. On GitHub Actions (commit `fcf10c2`) analyze, the Dart tests, the Kotlin tests and `flutter build apk --debug` all succeeded, so the Kotlin bridge compiles against the real Flutter and CameraX libraries. **Not done: running on a phone.** See README section 1.
+Dart: `flutter analyze` clean, 128 tests pass. Kotlin pure logic: 53 tests pass. On GitHub Actions (commit `51348b1`) analyze, the Dart tests, the Kotlin tests and `flutter build apk --debug` all succeeded with Flutter stable and with Flutter 3.32.5, so the Kotlin bridge compiles against the real Flutter and CameraX libraries. **Not done: running on a phone.** See README section 1.
+
+## Toolchain (why Gradle 8.14 / AGP 8.11 and older libraries)
+
+The owner's PC has Flutter 3.32.5. Findings from GitHub Actions:
+
+1. Flutter 3.32.5's own Gradle plugin does not compile under Gradle 9 (`Unresolved reference 'fileMode'`), so AGP 9 (which needs Gradle 9) cannot be used with it.
+2. The newest libraries need AGP 9: `androidx.core 1.19.1` ("requires Android Gradle plugin 9.1.0 or higher") and `permission_handler_android 14` (its build script assumes AGP 9's built-in Kotlin).
+3. So the project uses Gradle 8.14.3, AGP 8.11.1, Kotlin 2.2.20, `compileSdk 36`, `core-ktx 1.16.0`, `lifecycle-service 2.9.2`, CameraX `1.4.2`, `permission_handler ^12.0.1`.
+
+Result: commit `51348b1` builds with **both** Flutter 3.32.5 and the newest stable Flutter (analyze, 128 Dart tests, `flutter build apk --debug`, Kotlin unit tests, all green). The only code-level change from the native app is the CameraX version (1.6.2 -> 1.4.2); the Kotlin source needed no change. Not checked: behaviour of CameraX 1.4.2 on a phone.
+
+Later, when you move to a newer Flutter, you can go back to AGP 9 and the newest libraries (the commit before `b918b1c` is the AGP 9 setup that built with the newest Flutter).
 
 ## Last native version
 
