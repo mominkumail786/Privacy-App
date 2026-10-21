@@ -13,7 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
   # Asks for the camera / notification permission and tells "denied" from "denied permanently".
-  permission_handler: ^13.0.0
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:

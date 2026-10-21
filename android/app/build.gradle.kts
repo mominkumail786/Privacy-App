@@ -7,8 +7,9 @@ plugins {
 
 android {
     namespace = "com.example.privacyguard"
-    // 37: the current AndroidX libraries (core 1.19, CameraX 1.6) refuse to compile against less.
-    compileSdk = 37
+    // 36: the newest compileSdk that AGP 8.11 supports. (The newest AndroidX libraries need AGP 9.1 and
+    // compileSdk 37; they cannot be used here. See docs/FLUTTER_MIGRATION.md, "Toolchain".)
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -56,13 +57,13 @@ flutter {
 // The native part of the app: foreground camera service, camera preview, face detection and recognition.
 // (Flutter cannot run a camera service in the background, so this stays Kotlin. See docs/FLUTTER_MIGRATION.md.)
 dependencies {
-    implementation("androidx.core:core-ktx:1.19.1")
-    implementation("androidx.lifecycle:lifecycle-service:2.11.0")
+    implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.lifecycle:lifecycle-service:2.9.2")
 
-    implementation("androidx.camera:camera-core:1.6.2")
-    implementation("androidx.camera:camera-camera2:1.6.2")
-    implementation("androidx.camera:camera-lifecycle:1.6.2")
-    implementation("androidx.camera:camera-view:1.6.2")
+    implementation("androidx.camera:camera-core:1.4.2")
+    implementation("androidx.camera:camera-camera2:1.4.2")
+    implementation("androidx.camera:camera-lifecycle:1.4.2")
+    implementation("androidx.camera:camera-view:1.4.2")
 
     implementation("com.google.mlkit:face-detection:16.1.7")
     implementation("org.tensorflow:tensorflow-lite:2.16.1")
