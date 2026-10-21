@@ -8,13 +8,17 @@ on:
 
 jobs:
   build:
-    name: build (Flutter ${{ matrix.flutter }})
+    name: build (Flutter ${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         # "stable" = newest; 3.32.5 = the version on the owner's PC (to see if the project builds with it).
-        flutter: [ "stable", "3.32.5" ]
+        include:
+          - name: stable
+            version: ""
+          - name: "3.32.5"
+            version: "3.32.5"
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +30,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: ${{ matrix.flutter == 'stable' && '' || matrix.flutter }}
+          flutter-version: ${{ matrix.version }}
           cache: true
 
       - run: flutter --version
@@ -46,5 +50,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk-${{ matrix.flutter }}
+          name: app-debug-apk-${{ matrix.name }}
           path: build/app/outputs/flutter-apk/app-debug.apk
