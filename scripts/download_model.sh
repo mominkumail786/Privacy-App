@@ -3,7 +3,7 @@
 # this app was tested with. Run it from the project folder:   bash scripts/download_model.sh
 set -e
 
-URL="https://raw.githubusercontent.com/syaringan357/Android-MobileFaceNet-MTCNN-FaceAntiSpoofing/master/android/app/src/main/assets/MobileFaceNet.tflite"
+URL="https://raw.githubusercontent.com/syaringan357/Android-MobileFaceNet-MTCNN-FaceAntiSpoofing/master/app/src/main/assets/MobileFaceNet.tflite"
 SHA256="d8ba40c0127fb8ca9917e8fddc79bbbda063657bc92a496d34da0bc8a760443b"
 DEST="android/app/src/main/assets/MobileFaceNet.tflite"
 
