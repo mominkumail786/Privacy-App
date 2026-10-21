@@ -1,11 +1,14 @@
 # Recognition and alert audit: report
 
+> **Note (Flutter move):** this report describes the native Kotlin app at commit `1370dc4`. The project is now Flutter/Dart (see `docs/FLUTTER_MIGRATION.md`). The recognition logic, thresholds and measurements below are unchanged; the Kotlin source files named here are now in `android/app/src/main/kotlin/...`, and the calibration screen and the threshold calibrator are Dart (`lib/`). Where this report says "Compose" it means the old native screens.
+
+
 Scope: "recognise the enrolled owner, alert only for a different person". This report separates what was
 **measured**, what was **changed in code**, and what is **still unverified** because it needs the phone.
 
 ## 1. What the project really is
 
-* **Kotlin + Jetpack Compose Android app**, not Flutter/Dart (there is no `pubspec.yaml`). All work below is in the existing Kotlin code.
+* Native Kotlin + Jetpack Compose app at that time (it is now Flutter, see `docs/FLUTTER_MIGRATION.md`). All work below was done in that Kotlin code.
 * It already had a **real recognition pipeline**, not just detection:
   `CameraX frame -> ML Kit face detection (box + head angles) -> square crop -> MobileFaceNet (TFLite, 192 numbers) -> cosine similarity with the encrypted owner profile -> threshold -> N-of-M filter -> cooldown -> notification`.
 * Detection alone is never used as identity: a face counts as "owner" only through the similarity score.

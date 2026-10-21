@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the texts the native service needs for its notifications. All screen texts are in lib/strings.dart. -->
+<resources>
+    <string name="app_name">AI Privacy Guard</string>
+    <string name="status_active">Active: watching the front camera</string>
+    <string name="status_paused_camera">Protection paused: camera in use by another app</string>
+    <string name="status_paused_screen">Paused: screen is off</string>
+    <string name="status_paused_battery">Paused: battery is low</string>
+    <string name="status_degraded">Protection degraded: face analysis keeps failing</string>
+    <string name="status_stopped">Stopped</string>
+    <string name="status_permission">Permission missing</string>
+    <string name="status_setup">Setup needed (see below)</string>
+    <string name="notif_stop">Stop</string>
+    <string name="alert_title">Privacy Alert</string>
+    <string name="alert_text">Privacy Alert: Someone may be looking at your screen.</string>
+    <string name="restart_title">Privacy Guard is not running</string>
+    <string name="restart_text">Tap to restart Privacy Guard</string>
+    <string name="channel_status">Protection status</string>
+    <string name="channel_alert">Privacy alerts</string>
+    <string name="channel_restart">Restart reminder</string>
+</resources>

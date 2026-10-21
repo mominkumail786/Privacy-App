@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 
 $url = "https://raw.githubusercontent.com/syaringan357/Android-MobileFaceNet-MTCNN-FaceAntiSpoofing/master/app/src/main/assets/MobileFaceNet.tflite"
 $sha256 = "d8ba40c0127fb8ca9917e8fddc79bbbda063657bc92a496d34da0bc8a760443b"
-$dest = "app\src\main\assets\MobileFaceNet.tflite"
+$dest = "android\app\src\main\assets\MobileFaceNet.tflite"
 
 New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
 Write-Host "Downloading model (about 5 MB)..."

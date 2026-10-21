@@ -1,5 +1,8 @@
 # Enrollment fix report: "stuck on the 5 steps"
 
+> **Note (Flutter move):** this report describes the native Kotlin enrollment at commit `1370dc4`. The same state machine was ported 1:1 to Dart (`lib/logic/enrollment_machine.dart`), and the same simulated-user tests run there (`test/logic/enrollment_machine_test.dart`). The screen is now a Flutter screen (`lib/screens/enrollment_screen.dart`); the camera and the face vector stay in Kotlin (`bridge/FaceSession.kt`). Simulated durations were re-measured in Dart: ideal user 6.2 s, phone held low 6.2 s, slow careful user 13.8 s, 3 pictures/s 9.0 s, tiny movements 50.3 s. Still **not** measured on a phone.
+
+
 Honest status: the new enrollment logic was written and tested **with simulated users on a computer**.
 It has **not been run on a phone by me** and its real speed on a phone has **not been measured**.
 The screen now shows the real numbers (time, pictures per second, milliseconds per picture), so you can measure it yourself.

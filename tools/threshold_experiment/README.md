@@ -13,7 +13,7 @@ test is a simulation of a poor phone camera. This is NOT your phone. Use Setting
 python -m venv venv && . venv/bin/activate       # Windows: venv\Scripts\activate
 pip install ai-edge-litert "opencv-python-headless<4.13" "numpy<2.4"
 mkdir -p work/deepface/img
-cp app/src/main/assets/MobileFaceNet.tflite work/          # see README.md to download the model
+cp android/app/src/main/assets/MobileFaceNet.tflite work/          # see README.md to download the model
 B=https://raw.githubusercontent.com/serengil/deepface/master/tests/unit/dataset   # MIT licence
 curl -o work/deepface/master.csv $B/master.csv
 for f in $(awk -F, 'NR>1{print $1; print $2}' work/deepface/master.csv | sort -u); do curl -o work/deepface/img/$f $B/$f; done

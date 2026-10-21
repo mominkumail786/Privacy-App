@@ -1,0 +1,12 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+
+linter:
+  rules:
+    # Keep the code easy to read for a beginner.
+    prefer_const_constructors: true
+    avoid_print: true

@@ -1,0 +1,43 @@
+name: Flutter
+
+on:
+  push:
+    branches: [ "claude/**" , main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      # The face model is not stored in the repository (see README.md). The script also checks its SHA-256.
+      - run: bash scripts/download_model.sh
+
+      - run: flutter build apk --debug
+
+      # After the build, because Flutter creates android/gradlew (it is not stored in the repository).
+      - name: Kotlin unit tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
